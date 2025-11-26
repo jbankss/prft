@@ -972,6 +972,59 @@ export type Database = {
           },
         ]
       }
+      webhook_logs: {
+        Row: {
+          accounts_created: number | null
+          brand_id: string
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          integration_type: string
+          invoices_created: number | null
+          request_data: Json | null
+          response_summary: string | null
+          shopify_order_id: string | null
+          status: string
+        }
+        Insert: {
+          accounts_created?: number | null
+          brand_id: string
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          integration_type: string
+          invoices_created?: number | null
+          request_data?: Json | null
+          response_summary?: string | null
+          shopify_order_id?: string | null
+          status: string
+        }
+        Update: {
+          accounts_created?: number | null
+          brand_id?: string
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          integration_type?: string
+          invoices_created?: number | null
+          request_data?: Json | null
+          response_summary?: string | null
+          shopify_order_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

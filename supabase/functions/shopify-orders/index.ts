@@ -39,6 +39,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let supabase: any;
+  let brandId: string | null = null;
+  let order: any = null;
+
   try {
     const webhookSecret = Deno.env.get('SHOPIFY_WEBHOOK_SECRET');
     if (!webhookSecret) {
@@ -64,15 +68,31 @@ serve(async (req) => {
     }
 
     // Parse the order data
-    const order = JSON.parse(rawBody);
+    order = JSON.parse(rawBody);
     console.log('Processing Shopify order:', order.id);
 
-    // Get brand_id from query params (must match "Enzo Milwaukee")
+    // Get brand_id from query params
     const url = new URL(req.url);
-    const brandId = url.searchParams.get('brand_id');
+    brandId = url.searchParams.get('brand_id');
     
     if (!brandId) {
       console.error('Missing brand_id parameter');
+      
+      // Log the error
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const tempSupabase = createClient(supabaseUrl, supabaseKey);
+      
+      await tempSupabase.from('webhook_logs').insert({
+        brand_id: '00000000-0000-0000-0000-000000000000', // placeholder for missing brand
+        integration_type: 'shopify',
+        event_type: 'order_created',
+        status: 'error',
+        request_data: { order_id: order?.id },
+        error_message: 'Missing brand_id parameter',
+        shopify_order_id: order?.id?.toString()
+      });
+      
       return new Response('Brand ID required', { status: 400 });
     }
 
@@ -104,6 +124,20 @@ serve(async (req) => {
 
     if (existingInvoice) {
       console.log('Order already processed:', order.id);
+      
+      // Log duplicate order
+      await supabase.from('webhook_logs').insert({
+        brand_id: brandId,
+        integration_type: 'shopify',
+        event_type: 'order_created',
+        status: 'skipped',
+        request_data: order,
+        response_summary: 'Order already processed',
+        shopify_order_id: order.id.toString(),
+        invoices_created: 0,
+        accounts_created: 0
+      });
+      
       return new Response(JSON.stringify({ message: 'Order already processed' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -193,6 +227,19 @@ serve(async (req) => {
       console.log('No matching accounts found for any line items');
     }
 
+    // Log successful processing
+    await supabase.from('webhook_logs').insert({
+      brand_id: brandId,
+      integration_type: 'shopify',
+      event_type: 'order_created',
+      status: 'success',
+      request_data: order,
+      response_summary: `Created ${invoicesToCreate.length} invoice(s) for ${accountsCreated.length > 0 ? accountsCreated.length + ' new account(s)' : 'existing accounts'}`,
+      shopify_order_id: order.id.toString(),
+      invoices_created: invoicesToCreate.length,
+      accounts_created: accountsCreated.length
+    });
+
     return new Response(
       JSON.stringify({ 
         message: 'Order processed successfully',
@@ -209,6 +256,22 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error processing webhook:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
+    // Log the error
+    if (supabase && brandId) {
+      await supabase.from('webhook_logs').insert({
+        brand_id: brandId,
+        integration_type: 'shopify',
+        event_type: 'order_created',
+        status: 'error',
+        request_data: order,
+        error_message: errorMessage,
+        shopify_order_id: order?.id?.toString(),
+        invoices_created: 0,
+        accounts_created: 0
+      });
+    }
+    
     return new Response(
       JSON.stringify({ error: errorMessage }),
       {
