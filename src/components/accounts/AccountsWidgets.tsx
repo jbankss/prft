@@ -17,7 +17,6 @@ export function AccountsWidgets() {
     if (!currentBrand?.id) return;
 
     const fetchMetrics = async () => {
-      // Fetch accounts for current brand
       const { data: accounts } = await supabase
         .from('accounts')
         .select('*, charges(*), invoices(*)')
@@ -25,27 +24,50 @@ export function AccountsWidgets() {
 
       if (!accounts) return;
 
-      // Calculate example metrics
-      const totalAccounts = accounts.length;
-      
-      // Example P&L calculation (using balance as proxy for now)
-      const totalPL = accounts.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
-      
-      // Example inventory value (simulated)
-      const totalInventoryValue = totalAccounts * 15000;
-      
-      // Example avg days between orders (simulated)
-      const avgDaysBetweenOrders = 24;
+      // Calculate real P&L from actual data
+      let totalPL = 0;
+      accounts.forEach((account) => {
+        const revenue = account.invoices?.reduce((sum: number, inv: any) => sum + Number(inv.amount), 0) || 0;
+        const costs = account.charges?.reduce((sum: number, charge: any) => sum + Number(charge.amount), 0) || 0;
+        totalPL += (revenue - costs);
+      });
+
+      // Calculate inventory value from account balances
+      const totalInventoryValue = accounts.reduce((sum, acc) => sum + Math.abs(Number(acc.balance)), 0);
+
+      // Calculate average days between orders from all charges
+      const allCharges = accounts.flatMap(acc => acc.charges || []);
+      const chargeDates = allCharges.map(c => new Date(c.charge_date).getTime()).sort();
+      let avgDays = 21;
+      if (chargeDates.length > 1) {
+        const differences = [];
+        for (let i = 1; i < chargeDates.length; i++) {
+          differences.push((chargeDates[i] - chargeDates[i - 1]) / (1000 * 60 * 60 * 24));
+        }
+        avgDays = Math.round(differences.reduce((a, b) => a + b, 0) / differences.length);
+      }
 
       setMetrics({
         totalPL,
-        totalAccounts,
+        totalAccounts: accounts.length,
         totalInventoryValue,
-        avgDaysBetweenOrders,
+        avgDaysBetweenOrders: avgDays,
       });
     };
 
     fetchMetrics();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('widgets-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'charges' }, fetchMetrics)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, fetchMetrics)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchMetrics)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentBrand?.id]);
 
   const widgets = [

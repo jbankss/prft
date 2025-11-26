@@ -2,8 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Building2, DollarSign, FileText, Receipt, MessageSquare, Pencil, TrendingUp, TrendingDown, Package, Calendar } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { AccountDetails } from './AccountDetails';
+import { AccountDialog } from './AccountDialog';
 
 interface Account {
   id: string;
@@ -15,6 +17,8 @@ interface Account {
   brands?: {
     name: string;
   };
+  charges?: any[];
+  invoices?: any[];
 }
 
 export function AccountsList({
@@ -29,6 +33,20 @@ export function AccountsList({
   const [expandedAccounts, setExpandedAccounts] = useState<Record<string, boolean>>({});
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
 
+  useEffect(() => {
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('accounts-real-time')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'charges' }, onRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, onRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, onRefresh)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [onRefresh]);
+
   const toggleAccount = (accountId: string) => {
     setExpandedAccounts((prev) => ({
       ...prev,
@@ -40,25 +58,37 @@ export function AccountsList({
     setSelectedAccount(account);
   };
 
-  // Calculate example metrics for each account
+  // Calculate real metrics from actual data
   const getAccountMetrics = (account: Account) => {
-    // Example data - in production this would come from actual orders/sales
-    const seed = account.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const random = (Math.sin(seed) * 10000) % 1;
+    const charges = account.charges || [];
+    const invoices = account.invoices || [];
     
-    const examplePurchases = Math.floor(random * 50000) + 10000;
-    const exampleSales = examplePurchases * (1.3 + (random * 0.5)); // 30-80% markup
-    const profitLoss = exampleSales - examplePurchases;
-    const profitMargin = ((profitLoss / examplePurchases) * 100).toFixed(1);
-    const avgDaysBetweenOrders = Math.floor(random * 30) + 15;
-    const lastOrderDate = new Date(Date.now() - (random * 30 * 24 * 60 * 60 * 1000));
+    const purchases = charges.reduce((sum, charge) => sum + Number(charge.amount), 0);
+    const sales = invoices.reduce((sum, invoice) => sum + Number(invoice.amount), 0);
+    const profitLoss = sales - purchases;
+    const profitMargin = purchases > 0 ? ((profitLoss / purchases) * 100).toFixed(1) : '0.0';
+    
+    // Calculate average days between charges
+    const chargeDates = charges.map((c: any) => new Date(c.charge_date).getTime()).sort();
+    let avgDaysBetweenOrders = 0;
+    if (chargeDates.length > 1) {
+      const differences = [];
+      for (let i = 1; i < chargeDates.length; i++) {
+        differences.push((chargeDates[i] - chargeDates[i - 1]) / (1000 * 60 * 60 * 24));
+      }
+      avgDaysBetweenOrders = Math.round(differences.reduce((a, b) => a + b, 0) / differences.length);
+    }
+    
+    const lastOrderDate = chargeDates.length > 0 
+      ? new Date(chargeDates[chargeDates.length - 1])
+      : new Date();
 
     return {
-      purchases: examplePurchases,
-      sales: exampleSales,
+      purchases,
+      sales,
       profitLoss,
-      profitMargin,
-      avgDaysBetweenOrders,
+      profitMargin: Number(profitMargin),
+      avgDaysBetweenOrders: avgDaysBetweenOrders || 30,
       lastOrderDate,
     };
   };
@@ -183,6 +213,18 @@ export function AccountsList({
           </Card>
         );
       })}
+
+      {selectedAccount && (
+        <AccountDialog
+          open={!!selectedAccount}
+          onOpenChange={(open) => !open && setSelectedAccount(null)}
+          brands={brands}
+          onSuccess={() => {
+            setSelectedAccount(null);
+            onRefresh();
+          }}
+        />
+      )}
     </div>
   );
 }
