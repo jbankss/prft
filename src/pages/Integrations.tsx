@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { MainLayout } from '@/components/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -137,23 +136,20 @@ export default function Integrations() {
 
   if (!currentBrand) {
     return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-full">
-          <p className="text-muted-foreground">Please select a brand to view integrations</p>
-        </div>
-      </MainLayout>
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Please select a brand to view integrations</p>
+      </div>
     );
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
-          <p className="text-muted-foreground">
-            Connect {currentBrand.name} with third-party platforms
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
+        <p className="text-muted-foreground">
+          Connect {currentBrand.name} with third-party platforms
+        </p>
+      </div>
 
         <Tabs defaultValue="shopify" className="space-y-6">
           <TabsList>
@@ -406,6 +402,6 @@ export default function Integrations() {
           </TabsContent>
         </Tabs>
       </div>
-    </MainLayout>
+    </div>
   );
 }
