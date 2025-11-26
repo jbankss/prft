@@ -158,6 +158,276 @@ export type Database = {
           },
         ]
       }
+      brandboom_order_items: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          order_id: string
+          product_name: string
+          quantity: number
+          size: string | null
+          style_number: string | null
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          order_id: string
+          product_name: string
+          quantity?: number
+          size?: string | null
+          style_number?: string | null
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          product_name?: string
+          quantity?: number
+          size?: string | null
+          style_number?: string | null
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brandboom_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "brandboom_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brandboom_orders: {
+        Row: {
+          brand_id: string
+          brandboom_order_id: string
+          buyer_email: string | null
+          buyer_name: string
+          cancel_date: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          order_date: string
+          order_type: string | null
+          payment_status: string
+          raw_data: Json | null
+          ship_date: string | null
+          shipping_status: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          brandboom_order_id: string
+          buyer_email?: string | null
+          buyer_name: string
+          cancel_date?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_date: string
+          order_type?: string | null
+          payment_status?: string
+          raw_data?: Json | null
+          ship_date?: string | null
+          shipping_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          brandboom_order_id?: string
+          buyer_email?: string | null
+          buyer_name?: string
+          cancel_date?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_type?: string | null
+          payment_status?: string
+          raw_data?: Json | null
+          ship_date?: string | null
+          shipping_status?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brandboom_orders_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brandboom_payments: {
+        Row: {
+          amount: number
+          brand_id: string
+          created_at: string
+          id: string
+          order_id: string | null
+          payment_date: string
+          payment_method: string | null
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          brand_id: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          payment_date: string
+          payment_method?: string | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          brand_id?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brandboom_payments_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brandboom_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "brandboom_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brandboom_shipments: {
+        Row: {
+          brand_id: string
+          carrier: string | null
+          cost: number | null
+          created_at: string
+          delivery_date: string | null
+          id: string
+          order_id: string
+          ship_date: string | null
+          status: string
+          tracking_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          carrier?: string | null
+          cost?: number | null
+          created_at?: string
+          delivery_date?: string | null
+          id?: string
+          order_id: string
+          ship_date?: string | null
+          status?: string
+          tracking_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          carrier?: string | null
+          cost?: number | null
+          created_at?: string
+          delivery_date?: string | null
+          id?: string
+          order_id?: string
+          ship_date?: string | null
+          status?: string
+          tracking_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brandboom_shipments_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brandboom_shipments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "brandboom_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brandboom_sync_logs: {
+        Row: {
+          brand_id: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          records_synced: number | null
+          started_at: string
+          status: string
+          sync_type: string
+        }
+        Insert: {
+          brand_id: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          records_synced?: number | null
+          started_at?: string
+          status?: string
+          sync_type: string
+        }
+        Update: {
+          brand_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          records_synced?: number | null
+          started_at?: string
+          status?: string
+          sync_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brandboom_sync_logs_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           contact_email: string | null
