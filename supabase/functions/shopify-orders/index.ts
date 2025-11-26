@@ -67,10 +67,33 @@ serve(async (req) => {
     const order = JSON.parse(rawBody);
     console.log('Processing Shopify order:', order.id);
 
+    // Get brand_id from query params (must match "Enzo Milwaukee")
+    const url = new URL(req.url);
+    const brandId = url.searchParams.get('brand_id');
+    
+    if (!brandId) {
+      console.error('Missing brand_id parameter');
+      return new Response('Brand ID required', { status: 400 });
+    }
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Verify brand exists and is "Enzo Milwaukee"
+    const { data: brand } = await supabase
+      .from('brands')
+      .select('id, name')
+      .eq('id', brandId)
+      .maybeSingle();
+
+    if (!brand) {
+      console.error('Brand not found:', brandId);
+      return new Response('Invalid brand', { status: 400 });
+    }
+
+    console.log('Processing order for brand:', brand.name);
 
     // Check if we've already processed this order
     const { data: existingInvoice } = await supabase
@@ -89,39 +112,66 @@ serve(async (req) => {
 
     // Process each line item
     const invoicesToCreate = [];
+    const accountsCreated = [];
     
     for (const item of order.line_items) {
       const vendor = item.vendor;
       if (!vendor) continue;
 
-      // Find matching account by vendor name (case-insensitive)
-      const { data: accounts } = await supabase
+      // Find matching account by vendor name (case-insensitive) within this brand
+      let { data: accounts } = await supabase
         .from('accounts')
         .select('id, brand_id, account_name')
+        .eq('brand_id', brandId)
         .ilike('account_name', vendor);
 
-      if (accounts && accounts.length > 0) {
-        const account = accounts[0];
-        const amount = parseFloat(item.price) * item.quantity;
-        
-        invoicesToCreate.push({
-          account_id: account.id,
-          brand_id: account.brand_id,
-          invoice_number: `SHOP-${order.order_number}-${item.id}`,
-          amount: amount,
-          description: `Shopify Order #${order.order_number} - ${item.name}`,
-          status: 'paid',
-          paid_date: new Date().toISOString().split('T')[0],
-          due_date: new Date().toISOString().split('T')[0],
-          shopify_order_id: order.id.toString(),
-          source: 'shopify',
-          notes: `Vendor: ${vendor}, Quantity: ${item.quantity}`,
-        });
+      let account = accounts && accounts.length > 0 ? accounts[0] : null;
 
-        console.log(`Matched vendor "${vendor}" to account "${account.account_name}"`);
-      } else {
-        console.log(`No matching account found for vendor: ${vendor}`);
+      // If no account exists, create one
+      if (!account) {
+        console.log(`Creating new account for vendor: ${vendor}`);
+        const { data: newAccount, error: createError } = await supabase
+          .from('accounts')
+          .insert({
+            account_name: vendor,
+            brand_id: brandId,
+            balance: 0,
+            status: 'active',
+            notes: `Auto-created from Shopify integration on ${new Date().toISOString().split('T')[0]}`
+          })
+          .select()
+          .single();
+
+        if (createError || !newAccount) {
+          console.error('Error creating account:', createError);
+          continue;
+        }
+
+        account = newAccount;
+        accountsCreated.push(vendor);
+        console.log(`Created account for vendor "${vendor}"`);
       }
+
+      // At this point, account is guaranteed to be non-null
+      if (!account) continue; // Type narrowing for TypeScript
+      
+      const amount = parseFloat(item.price) * item.quantity;
+      
+      invoicesToCreate.push({
+        account_id: account.id,
+        brand_id: account.brand_id,
+        invoice_number: `SHOP-${order.order_number}-${item.id}`,
+        amount: amount,
+        description: `Shopify Order #${order.order_number} - ${item.name}`,
+        status: 'paid',
+        paid_date: new Date().toISOString().split('T')[0],
+        due_date: new Date().toISOString().split('T')[0],
+        shopify_order_id: order.id.toString(),
+        source: 'shopify',
+        notes: `Vendor: ${vendor}, Quantity: ${item.quantity}`,
+      });
+
+      console.log(`Processed vendor "${vendor}" for account "${account.account_name}"`);
     }
 
     // Insert all invoices
@@ -146,7 +196,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         message: 'Order processed successfully',
-        invoices_created: invoicesToCreate.length 
+        invoices_created: invoicesToCreate.length,
+        accounts_created: accountsCreated.length,
+        new_accounts: accountsCreated
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

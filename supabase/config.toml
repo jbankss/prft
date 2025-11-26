@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.shopify-orders]
 verify_jwt = false
+
+[functions.integration-assistant]
+verify_jwt = false
