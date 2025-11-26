@@ -1,4 +1,4 @@
-import { Home, Building2, Image, CheckCircle, Settings } from 'lucide-react';
+import { Home, Building2, Image, CheckCircle, Settings, User } from 'lucide-react';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { BrandSwitcher } from './BrandSwitcher';
 import { NavLink } from '@/components/NavLink';
@@ -28,6 +28,7 @@ export function AppSidebar() {
     { title: 'Account Management', url: '/accounts', icon: Building2 },
     { title: 'Photography & Creative', url: '/creative', icon: Image },
     ...(isMJAdmin ? [{ title: 'Approvals', url: '/approvals', icon: CheckCircle }] : []),
+    { title: 'Profile', url: '/profile', icon: User },
     { title: 'Settings', url: '/settings', icon: Settings },
   ];
 
