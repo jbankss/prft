@@ -7,6 +7,7 @@ interface BrandContextType {
   currentBrand: any | null;
   availableBrands: any[];
   switchBrand: (brandId: string) => Promise<void>;
+  refreshBrands: () => Promise<void>;
   loading: boolean;
   isMJAdmin: boolean;
 }
@@ -20,15 +21,13 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isMJAdmin, setIsMJAdmin] = useState(false);
 
-  useEffect(() => {
+  const fetchUserBrands = async () => {
     if (!user) {
       setCurrentBrand(null);
       setAvailableBrands([]);
       setLoading(false);
       return;
     }
-
-    const fetchUserBrands = async () => {
       try {
         // Get user's approved brands
         const { data: userRoles, error: rolesError } = await supabase
@@ -75,8 +74,9 @@ export function BrandProvider({ children }: { children: ReactNode }) {
       } finally {
         setLoading(false);
       }
-    };
+  };
 
+  useEffect(() => {
     fetchUserBrands();
   }, [user]);
 
@@ -103,8 +103,12 @@ export function BrandProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshBrands = async () => {
+    await fetchUserBrands();
+  };
+
   return (
-    <BrandContext.Provider value={{ currentBrand, availableBrands, switchBrand, loading, isMJAdmin }}>
+    <BrandContext.Provider value={{ currentBrand, availableBrands, switchBrand, refreshBrands, loading, isMJAdmin }}>
       {children}
     </BrandContext.Provider>
   );
