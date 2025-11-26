@@ -158,6 +158,105 @@ export type Database = {
           },
         ]
       }
+      brand_chat_messages: {
+        Row: {
+          attachments: Json | null
+          brand_id: string
+          created_at: string
+          id: string
+          message: string
+          user_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          brand_id: string
+          created_at?: string
+          id?: string
+          message: string
+          user_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          brand_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_chat_messages_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_chat_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_documents: {
+        Row: {
+          brand_id: string
+          created_at: string
+          description: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          mime_type: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          mime_type: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          mime_type?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_documents_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brandboom_order_items: {
         Row: {
           color: string | null
@@ -449,6 +548,7 @@ export type Database = {
           name: string
           notes: string | null
           updated_at: string
+          website: string | null
         }
         Insert: {
           contact_email?: string | null
@@ -461,6 +561,7 @@ export type Database = {
           name: string
           notes?: string | null
           updated_at?: string
+          website?: string | null
         }
         Update: {
           contact_email?: string | null
@@ -473,6 +574,7 @@ export type Database = {
           name?: string
           notes?: string | null
           updated_at?: string
+          website?: string | null
         }
         Relationships: [
           {

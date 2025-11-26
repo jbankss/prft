@@ -6,12 +6,11 @@ import { useBrandContext } from '@/hooks/useBrandContext';
 
 const navItems = [
   { label: 'Home', path: '/' },
+  { label: 'Accounts', path: '/accounts' },
+  { label: 'Creative', path: '/creative' },
   { label: 'Payments', path: '/payments' },
-  { label: 'Balances', path: '/balances' },
-  { label: 'Brands', path: '/customers' },
-  { label: 'Products', path: '/products' },
-  { label: 'Reports', path: '/reports' },
-  { label: 'Connect', path: '/connect' },
+  { label: 'Approvals', path: '/approvals' },
+  { label: 'Customers', path: '/customers' },
 ];
 
 export function TopNav() {
