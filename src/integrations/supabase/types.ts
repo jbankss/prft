@@ -103,6 +103,51 @@ export type Database = {
           },
         ]
       }
+      asset_collections: {
+        Row: {
+          cover_asset_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          cover_asset_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          cover_asset_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_collections_cover_asset_id_fkey"
+            columns: ["cover_asset_id"]
+            isOneToOne: false
+            referencedRelation: "creative_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_collections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           contact_email: string | null
@@ -247,6 +292,119 @@ export type Database = {
           {
             foreignKeyName: "chat_messages_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collection_assets: {
+        Row: {
+          asset_id: string
+          collection_id: string
+          created_at: string
+          id: string
+          position: number | null
+        }
+        Insert: {
+          asset_id: string
+          collection_id: string
+          created_at?: string
+          id?: string
+          position?: number | null
+        }
+        Update: {
+          asset_id?: string
+          collection_id?: string
+          created_at?: string
+          id?: string
+          position?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "creative_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_assets_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "asset_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creative_assets: {
+        Row: {
+          bucket: string
+          category: string
+          created_at: string
+          description: string | null
+          duration: number | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          height: number | null
+          id: string
+          metadata: Json | null
+          mime_type: string
+          status: string
+          tags: string[] | null
+          title: string | null
+          updated_at: string
+          uploaded_by: string | null
+          width: number | null
+        }
+        Insert: {
+          bucket: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          duration?: number | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          height?: number | null
+          id?: string
+          metadata?: Json | null
+          mime_type: string
+          status?: string
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          width?: number | null
+        }
+        Update: {
+          bucket?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          duration?: number | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          height?: number | null
+          id?: string
+          metadata?: Json | null
+          mime_type?: string
+          status?: string
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_assets_uploaded_by_fkey"
+            columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

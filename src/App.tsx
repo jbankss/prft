@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { MainLayout } from "@/components/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
+import Creative from "./pages/Creative";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -25,6 +26,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
               <Route path="/accounts" element={<MainLayout><Accounts /></MainLayout>} />
+              <Route path="/creative" element={<MainLayout><Creative /></MainLayout>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
