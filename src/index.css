@@ -50,10 +50,10 @@ All colors MUST be HSL.
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
 
     /* Gradient colors */
-    --gradient-start: 262 83% 58%;
-    --gradient-mid: 316 70% 50%;
-    --gradient-end: 213 94% 68%;
-    --gradient-accent: 158 64% 52%;
+    --gradient-start: 220 15% 92%;
+    --gradient-mid: 240 20% 94%;
+    --gradient-end: 200 18% 93%;
+    --gradient-accent: 210 17% 95%;
 
     --sidebar-background: 0 0% 98%;
 
@@ -112,10 +112,10 @@ All colors MUST be HSL.
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
 
     /* Dark mode gradient colors */
-    --gradient-start: 262 90% 65%;
-    --gradient-mid: 316 80% 60%;
-    --gradient-end: 213 100% 75%;
-    --gradient-accent: 158 70% 58%;
+    --gradient-start: 220 10% 16%;
+    --gradient-mid: 240 12% 18%;
+    --gradient-end: 200 11% 17%;
+    --gradient-accent: 210 10% 19%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
