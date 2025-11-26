@@ -823,6 +823,8 @@ export type Database = {
           invoice_number: string
           notes: string | null
           paid_date: string | null
+          shopify_order_id: string | null
+          source: string | null
           status: string
           updated_at: string
         }
@@ -836,6 +838,8 @@ export type Database = {
           invoice_number: string
           notes?: string | null
           paid_date?: string | null
+          shopify_order_id?: string | null
+          source?: string | null
           status?: string
           updated_at?: string
         }
@@ -849,6 +853,8 @@ export type Database = {
           invoice_number?: string
           notes?: string | null
           paid_date?: string | null
+          shopify_order_id?: string | null
+          source?: string | null
           status?: string
           updated_at?: string
         }
