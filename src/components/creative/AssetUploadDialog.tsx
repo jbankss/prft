@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { Upload, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Upload, X, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function AssetUploadDialog({
@@ -32,6 +33,7 @@ export function AssetUploadDialog({
     title: '',
     description: '',
     tags: '',
+    aiTagging: false,
   });
 
   const handleFileDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -86,8 +88,11 @@ export function AssetUploadDialog({
           height = img.height;
         }
 
+        // Get initial tags
+        let initialTags = formData.tags ? formData.tags.split(',').map(t => t.trim()) : [];
+
         // Create database record
-        const { error: dbError } = await supabase.from('creative_assets').insert({
+        const { data: assetData, error: dbError } = await supabase.from('creative_assets').insert({
           file_name: file.name,
           file_path: filePath,
           file_size: file.size,
@@ -98,14 +103,39 @@ export function AssetUploadDialog({
           height,
           title: formData.title || file.name,
           description: formData.description,
-          tags: formData.tags ? formData.tags.split(',').map(t => t.trim()) : [],
+          tags: initialTags,
           status: formData.status,
           category: formData.category,
           uploaded_by: user.id,
           brand_id: currentBrand.id,
-        });
+        }).select().single();
 
         if (dbError) throw dbError;
+
+        // If AI tagging is enabled and it's an image, analyze it
+        if (formData.aiTagging && file.type.startsWith('image/') && assetData) {
+          try {
+            const { data: { publicUrl } } = supabase.storage
+              .from(bucket)
+              .getPublicUrl(filePath);
+
+            const { data: aiResult } = await supabase.functions.invoke('analyze-image', {
+              body: { imageUrl: publicUrl, brandId: currentBrand.id }
+            });
+
+            if (aiResult?.tags && Array.isArray(aiResult.tags)) {
+              const combinedTags = [...new Set([...initialTags, ...aiResult.tags])];
+              
+              await supabase
+                .from('creative_assets')
+                .update({ tags: combinedTags })
+                .eq('id', assetData.id);
+            }
+          } catch (aiError) {
+            console.error('AI tagging error:', aiError);
+            // Don't fail the upload if AI tagging fails
+          }
+        }
 
         setProgress(((i + 1) / files.length) * 100);
       }
@@ -118,6 +148,7 @@ export function AssetUploadDialog({
         title: '',
         description: '',
         tags: '',
+        aiTagging: false,
       });
       onOpenChange(false);
       onSuccess();
@@ -246,6 +277,28 @@ export function AssetUploadDialog({
               onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
               placeholder="e.g., summer, campaign, hero"
             />
+          </div>
+
+          <div className="flex items-center space-x-2 p-3 border border-border rounded-lg bg-muted/30">
+            <Checkbox
+              id="ai-tagging"
+              checked={formData.aiTagging}
+              onCheckedChange={(checked) => 
+                setFormData({ ...formData, aiTagging: checked as boolean })
+              }
+            />
+            <div className="flex-1">
+              <label
+                htmlFor="ai-tagging"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex items-center gap-2"
+              >
+                <Sparkles className="h-4 w-4 text-primary" />
+                Auto-tag with AI
+              </label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Automatically detect colors, moods, environments, and brand logos
+              </p>
+            </div>
           </div>
 
           {uploading && (
