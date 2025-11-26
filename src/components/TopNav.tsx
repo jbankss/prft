@@ -16,6 +16,9 @@ const navItems = [{
   label: 'Creative',
   path: '/creative'
 }, {
+  label: 'Integrations',
+  path: '/integrations'
+}, {
   label: 'Payments',
   path: '/payments'
 }, {
