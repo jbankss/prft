@@ -1,6 +1,8 @@
 import { ReactNode, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useBrandContext } from '@/hooks/useBrandContext';
+import { PendingApproval } from './PendingApproval';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Button } from '@/components/ui/button';
@@ -8,22 +10,18 @@ import { LogOut, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 export function MainLayout({ children }: { children: ReactNode }) {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { availableBrands, loading: brandLoading } = useBrandContext();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
-    console.log('MainLayout: user', user?.email, 'loading', loading);
-    if (!loading && !user) {
-      console.log('MainLayout: Redirecting to /auth');
+    if (!authLoading && !user) {
       navigate('/auth');
     }
-  }, [user, loading, navigate]);
+  }, [user, authLoading, navigate]);
 
-  console.log('MainLayout: Rendering. Loading:', loading, 'User:', user?.email);
-
-  if (loading) {
-    console.log('MainLayout: Showing loading state');
+  if (authLoading || brandLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -32,8 +30,12 @@ export function MainLayout({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    console.log('MainLayout: No user, returning null (should redirect)');
     return null;
+  }
+
+  // Show pending approval screen if user has no approved brands
+  if (availableBrands.length === 0) {
+    return <PendingApproval />;
   }
 
   return (

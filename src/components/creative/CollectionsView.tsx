@@ -1,19 +1,24 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useBrandContext } from '@/hooks/useBrandContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function CollectionsView({ onRefresh }: { onRefresh: () => void }) {
+  const { currentBrand } = useBrandContext();
   const [collections, setCollections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCollections = async () => {
+    if (!currentBrand) return;
+    
     try {
       const { data, error } = await supabase
         .from('asset_collections')
         .select('*, profiles(full_name), creative_assets!asset_collections_cover_asset_id_fkey(*)')
+        .eq('brand_id', currentBrand.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -26,17 +31,19 @@ export function CollectionsView({ onRefresh }: { onRefresh: () => void }) {
   };
 
   useEffect(() => {
-    fetchCollections();
+    if (currentBrand) {
+      fetchCollections();
 
-    const channel = supabase
-      .channel('collections-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'asset_collections' }, fetchCollections)
-      .subscribe();
+      const channel = supabase
+        .channel('collections-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'asset_collections' }, fetchCollections)
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [currentBrand]);
 
   if (loading) {
     return (

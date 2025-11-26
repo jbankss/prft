@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useBrandContext } from '@/hooks/useBrandContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import { CollectionsView } from '@/components/creative/CollectionsView';
 import { toast } from 'sonner';
 
 export default function Creative() {
+  const { currentBrand } = useBrandContext();
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
@@ -21,10 +23,13 @@ export default function Creative() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchAssets = async () => {
+    if (!currentBrand) return;
+    
     try {
       let query = supabase
         .from('creative_assets')
         .select('*, profiles(full_name)')
+        .eq('brand_id', currentBrand.id)
         .order('created_at', { ascending: false });
 
       if (category !== 'all') {
@@ -47,17 +52,19 @@ export default function Creative() {
   };
 
   useEffect(() => {
-    fetchAssets();
+    if (currentBrand) {
+      fetchAssets();
 
-    const channel = supabase
-      .channel('creative-assets-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'creative_assets' }, fetchAssets)
-      .subscribe();
+      const channel = supabase
+        .channel('creative-assets-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'creative_assets' }, fetchAssets)
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [category, status]);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [currentBrand, category, status]);
 
   const filteredAssets = assets.filter(asset => {
     if (!searchQuery) return true;
