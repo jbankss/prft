@@ -15,16 +15,19 @@ export function CreativeWidgets({ totalAssets, storageUsed, storageTotal, recent
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card className="p-6 bg-gradient-to-br from-primary to-accent text-primary-foreground">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium opacity-90">Total Assets</h3>
-          <Image className="w-5 h-5 opacity-75" />
+      <Card className="p-6 animated-gradient text-primary-foreground hover-lift overflow-hidden relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/10" />
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium opacity-90">Total Assets</h3>
+            <Image className="w-5 h-5 opacity-75" />
+          </div>
+          <div className="text-3xl font-bold">{totalAssets}</div>
+          <p className="text-xs opacity-75 mt-2">All creative files</p>
         </div>
-        <div className="text-3xl font-bold">{totalAssets}</div>
-        <p className="text-xs opacity-75 mt-2">All creative files</p>
       </Card>
 
-      <Card className="p-6">
+      <Card className="p-6 hover-lift animated-gradient-slow">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-muted-foreground">Storage</h3>
           <HardDrive className="w-5 h-5 text-muted-foreground" />
@@ -42,7 +45,7 @@ export function CreativeWidgets({ totalAssets, storageUsed, storageTotal, recent
         <p className="text-xs text-muted-foreground mt-2">of {storageTotalGB} GB</p>
       </Card>
 
-      <Card className="p-6">
+      <Card className="p-6 hover-lift animated-gradient-slow">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-muted-foreground">Recent Activity</h3>
           <Clock className="w-5 h-5 text-muted-foreground" />
@@ -51,7 +54,7 @@ export function CreativeWidgets({ totalAssets, storageUsed, storageTotal, recent
         <p className="text-xs text-muted-foreground mt-2">Uploads this week</p>
       </Card>
 
-      <Card className="p-6">
+      <Card className="p-6 hover-lift animated-gradient-slow">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-muted-foreground">Performance</h3>
           <TrendingUp className="w-5 h-5 text-muted-foreground" />

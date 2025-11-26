@@ -10,16 +10,19 @@ import { CollectionsView } from '@/components/creative/CollectionsView';
 import { CreativeSidebar } from '@/components/creative/CreativeSidebar';
 import { CreativeWidgets } from '@/components/creative/CreativeWidgets';
 import { IntegratedUpload } from '@/components/creative/IntegratedUpload';
+import { BulkActions } from '@/components/creative/BulkActions';
 import { toast } from 'sonner';
 
 export default function Creative() {
   const { currentBrand } = useBrandContext();
   const [assets, setAssets] = useState<any[]>([]);
+  const [collections, setCollections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<'overview' | 'assets' | 'upload' | 'collections' | 'analytics' | 'storage'>('overview');
   const [category, setCategory] = useState<string>('all');
   const [status, setStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const fetchAssets = async () => {
     if (!currentBrand) return;
@@ -50,13 +53,32 @@ export default function Creative() {
     }
   };
 
+  const fetchCollections = async () => {
+    if (!currentBrand) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('asset_collections')
+        .select('*')
+        .eq('brand_id', currentBrand.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCollections(data || []);
+    } catch (error: any) {
+      console.error('Failed to fetch collections:', error);
+    }
+  };
+
   useEffect(() => {
     if (currentBrand) {
       fetchAssets();
+      fetchCollections();
 
       const channel = supabase
         .channel('creative-assets-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'creative_assets' }, fetchAssets)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'asset_collections' }, fetchCollections)
         .subscribe();
 
       return () => {
@@ -74,6 +96,14 @@ export default function Creative() {
       asset.tags?.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   });
+
+  const toggleSelectAsset = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id)
+        ? prev.filter(selectedId => selectedId !== id)
+        : [...prev, id]
+    );
+  };
 
   // Calculate stats for widgets
   const totalStorage = 10 * 1024 * 1024 * 1024; // 10 GB total
@@ -144,7 +174,8 @@ export default function Creative() {
                   </div>
                   <AssetList 
                     assets={assets.slice(0, 5)} 
-                    onRefresh={fetchAssets} 
+                    onRefresh={fetchAssets}
+                    selectedIds={[]}
                   />
                 </div>
 
@@ -224,10 +255,22 @@ export default function Creative() {
                   </p>
                 </div>
               ) : (
-                <AssetList assets={filteredAssets} onRefresh={fetchAssets} />
+                <AssetList 
+                  assets={filteredAssets} 
+                  onRefresh={fetchAssets}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelectAsset}
+                />
               )}
             </div>
           )}
+
+          <BulkActions
+            selectedIds={selectedIds}
+            onClearSelection={() => setSelectedIds([])}
+            onRefresh={fetchAssets}
+            collections={collections}
+          />
 
           {/* Upload View */}
           {activeView === 'upload' && (

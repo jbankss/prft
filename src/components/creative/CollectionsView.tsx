@@ -4,11 +4,13 @@ import { useBrandContext } from '@/hooks/useBrandContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, FolderOpen } from 'lucide-react';
+import { CollectionDetail } from './CollectionDetail';
 import { toast } from 'sonner';
 
 export function CollectionsView({ onRefresh }: { onRefresh: () => void }) {
   const { currentBrand } = useBrandContext();
   const [collections, setCollections] = useState<any[]>([]);
+  const [selectedCollection, setSelectedCollection] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchCollections = async () => {
@@ -53,6 +55,15 @@ export function CollectionsView({ onRefresh }: { onRefresh: () => void }) {
     );
   }
 
+  if (selectedCollection) {
+    return (
+      <CollectionDetail
+        collection={selectedCollection}
+        onBack={() => setSelectedCollection(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -64,7 +75,7 @@ export function CollectionsView({ onRefresh }: { onRefresh: () => void }) {
       </div>
 
       {collections.length === 0 ? (
-        <Card className="p-12 text-center glass">
+        <Card className="p-12 text-center animated-gradient-slow">
           <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground mb-4">
             No collections yet. Create collections to organize your assets.
@@ -79,7 +90,8 @@ export function CollectionsView({ onRefresh }: { onRefresh: () => void }) {
           {collections.map((collection) => (
             <Card
               key={collection.id}
-              className="p-6 glass shadow-apple-md hover:shadow-apple-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer"
+              className="p-6 hover-lift cursor-pointer animated-gradient-slow"
+              onClick={() => setSelectedCollection(collection)}
             >
               <div className="flex items-center gap-3 mb-3">
                 <FolderOpen className="h-8 w-8 text-primary" />

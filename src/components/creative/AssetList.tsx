@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, Image, Video, MoreVertical, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { AssetDetailsDialog } from './AssetDetailsDialog';
+import { PresenceIndicator } from './PresenceIndicator';
+import { useAssetPresence } from '@/hooks/useAssetPresence';
 
 interface Asset {
   id: string;
@@ -25,11 +28,16 @@ interface Asset {
 export function AssetList({
   assets,
   onRefresh,
+  selectedIds = [],
+  onToggleSelect,
 }: {
   assets: Asset[];
   onRefresh: () => void;
+  selectedIds?: string[];
+  onToggleSelect?: (id: string) => void;
 }) {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const { viewers } = useAssetPresence();
 
   const getAssetUrl = (asset: Asset) => {
     const { data } = supabase.storage.from(asset.bucket).getPublicUrl(asset.file_path);
@@ -97,12 +105,33 @@ export function AssetList({
           const isImage = asset.mime_type.startsWith('image/');
           const progress = getStatusProgress(asset.status);
 
+          const assetViewers = viewers.filter(v => v.viewing_asset_id === asset.id);
+          const isSelected = selectedIds.includes(asset.id);
+
           return (
             <div
               key={asset.id}
-              className="flex items-center gap-4 p-4 bg-card/50 rounded-xl border border-border hover:bg-card transition-all cursor-pointer group"
-              onClick={() => setSelectedAsset(asset)}
+              className={`flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer group hover-lift ${
+                isSelected 
+                  ? 'bg-primary/10 border-primary' 
+                  : 'bg-card/50 border-border hover:bg-card'
+              }`}
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest('.checkbox-wrapper')) return;
+                setSelectedAsset(asset);
+              }}
             >
+              {/* Checkbox */}
+              {onToggleSelect && (
+                <div className="checkbox-wrapper" onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => onToggleSelect(asset.id)}
+                    className="h-5 w-5"
+                  />
+                </div>
+              )}
+
               {/* Thumbnail */}
               <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-muted/50">
                 {isImage ? (
@@ -141,8 +170,11 @@ export function AssetList({
                 </div>
               </div>
 
-              {/* Status & Progress */}
+              {/* Presence & Status */}
               <div className="flex items-center gap-4">
+                {assetViewers.length > 0 && (
+                  <PresenceIndicator viewers={assetViewers} />
+                )}
                 {asset.status !== 'archived' && (
                   <div className="flex flex-col items-center gap-1">
                     <div className="relative w-12 h-12">
