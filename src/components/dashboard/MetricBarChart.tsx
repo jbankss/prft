@@ -1,110 +1,118 @@
-import { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
-import { Sparkles } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 const data = [
-  { name: 'Initiated', value: 65200, color: 'hsl(217, 91%, 60%)' },
-  { name: 'Authorized', value: 54800, color: 'hsl(217, 91%, 60%)' },
-  { name: 'Successful', value: 48600, color: 'hsl(217, 91%, 60%)' },
-  { name: 'Payouts', value: 38300, color: 'hsl(217, 91%, 60%)' },
-  { name: 'Completed', value: 32900, color: 'hsl(217, 91%, 60%)' },
+  { 
+    brand: 'Acme Fashion', 
+    cleared: 8500, 
+    submitted: 2100, 
+    upcoming: 900,
+    total: 11500
+  },
+  { 
+    brand: 'StyleCo', 
+    cleared: 7200, 
+    submitted: 3400, 
+    upcoming: 600,
+    total: 11200
+  },
+  { 
+    brand: 'TrendWear', 
+    cleared: 5800, 
+    submitted: 1800, 
+    upcoming: 1200,
+    total: 8800
+  },
+  { 
+    brand: 'Urban Chic', 
+    cleared: 4200, 
+    submitted: 1500, 
+    upcoming: 400,
+    total: 6100
+  },
+  { 
+    brand: 'Elite Designs', 
+    cleared: 2700, 
+    submitted: 1000, 
+    upcoming: 200,
+    total: 3900
+  },
 ];
 
-const tabs = ['Initiated Payments', 'Authorized Payments', 'Successful Payments', 'Payouts to Merchants', 'Completed Transactions'];
-
 export function MetricBarChart() {
-  const [activeTab, setActiveTab] = useState(2);
 
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold">Payments</h2>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-6 mb-6 border-b overflow-x-auto">
-        {tabs.map((tab, idx) => (
-          <button
-            key={idx}
-            onClick={() => setActiveTab(idx)}
-            className={`pb-3 px-1 text-sm whitespace-nowrap transition-colors border-b-2 ${
-              activeTab === idx
-                ? 'border-primary text-foreground font-medium'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-muted-foreground text-xs">{tab}</span>
-              <span className="text-2xl font-semibold text-foreground">
-                {(data[idx].value / 1000).toFixed(1)}k
-              </span>
-            </div>
-          </button>
-        ))}
+        <h2 className="text-xl font-semibold">Payments by Brand</h2>
+        <span className="text-sm text-muted-foreground">Top 5 Recent Brands</span>
       </div>
 
       {/* Chart */}
-      <div className="h-64 mb-6">
+      <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data}>
-            <XAxis
-              dataKey="name"
+          <BarChart data={data} layout="vertical">
+            <XAxis 
+              type="number"
               axisLine={false}
               tickLine={false}
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
             />
             <YAxis
+              type="category"
+              dataKey="brand"
               axisLine={false}
               tickLine={false}
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-              tickFormatter={(value) => `${value / 1000}k`}
+              width={100}
             />
             <Tooltip
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
-                  const value = payload[0].value as number;
-                  const index = data.findIndex(d => d.value === value);
-                  const conversion = index > 0 ? ((value / data[index - 1].value) * 100).toFixed(0) : '100';
-                  const dropoff = index > 0 ? (100 - parseFloat(conversion)).toFixed(0) : '0';
-                  
+                  const data = payload[0].payload;
                   return (
                     <div className="bg-card border rounded-lg p-3 shadow-lg">
-                      <p className="text-sm font-medium">{value.toLocaleString()} transactions</p>
-                      <p className="text-xs text-muted-foreground">
-                        Conversion: {conversion}% | Drop-off: -{dropoff}%
-                      </p>
+                      <p className="text-sm font-medium mb-2">{data.brand}</p>
+                      <div className="space-y-1">
+                        <p className="text-xs flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-[hsl(142,71%,45%)]"></span>
+                          Cleared: ${data.cleared.toLocaleString()}
+                        </p>
+                        <p className="text-xs flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-[hsl(45,93%,47%)]"></span>
+                          Submitted: ${data.submitted.toLocaleString()}
+                        </p>
+                        <p className="text-xs flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-[hsl(217,91%,60%)]"></span>
+                          Upcoming: ${data.upcoming.toLocaleString()}
+                        </p>
+                        <p className="text-xs font-medium pt-1 border-t mt-1">
+                          Total: ${data.total.toLocaleString()}
+                        </p>
+                      </div>
                     </div>
                   );
                 }
                 return null;
               }}
             />
-            <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-              {data.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={index === activeTab ? 'hsl(217, 91%, 60%)' : 'hsl(217, 91%, 85%)'}
-                  style={{
-                    filter: index === activeTab ? 'none' : 'opacity(0.3)',
-                  }}
-                />
-              ))}
-            </Bar>
+            <Legend 
+              wrapperStyle={{ paddingTop: '20px' }}
+              formatter={(value) => {
+                const labels: { [key: string]: string } = {
+                  cleared: 'Cleared',
+                  submitted: 'Submitted',
+                  upcoming: 'Upcoming'
+                };
+                return labels[value] || value;
+              }}
+            />
+            <Bar dataKey="cleared" stackId="a" fill="hsl(142, 71%, 45%)" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="submitted" stackId="a" fill="hsl(45, 93%, 47%)" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="upcoming" stackId="a" fill="hsl(217, 91%, 60%)" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
-      </div>
-
-      {/* AI Insights */}
-      <div className="bg-muted/50 rounded-lg p-4 flex items-start gap-3">
-        <Sparkles className="w-5 h-5 text-muted-foreground mt-0.5" />
-        <div className="flex-1">
-          <p className="text-sm text-muted-foreground mb-2">What would you like to explore next?</p>
-          <p className="text-sm">
-            I want to know what caused the drop-off from authorized to{' '}
-            <span className="text-orange-500 bg-orange-50 px-2 py-0.5 rounded">successful payments</span>
-          </p>
-        </div>
       </div>
     </Card>
   );

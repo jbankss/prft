@@ -2,9 +2,9 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
 const volumeData = [
-  { label: 'Online Payments', amount: 24500, color: 'hsl(142, 71%, 45%)' },
-  { label: 'Subscriptions', amount: 12300, color: 'hsl(217, 91%, 60%)' },
-  { label: 'In-Store Sales', amount: 4700, color: 'hsl(350, 89%, 60%)' },
+  { label: 'Cleared', amount: 28400, color: 'hsl(142, 71%, 45%)' },
+  { label: 'Submitted', amount: 9800, color: 'hsl(45, 93%, 47%)' },
+  { label: 'Upcoming', amount: 3300, color: 'hsl(217, 91%, 60%)' },
 ];
 
 export function GrossVolumeCard() {
