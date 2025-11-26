@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useBrandContext } from '@/hooks/useBrandContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ export function AssetUploadDialog({
   onSuccess: () => void;
 }) {
   const { user } = useAuth();
+  const { currentBrand } = useBrandContext();
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -50,7 +52,7 @@ export function AssetUploadDialog({
   };
 
   const handleUpload = async () => {
-    if (files.length === 0 || !user) return;
+    if (files.length === 0 || !user || !currentBrand) return;
 
     setUploading(true);
     setProgress(0);
@@ -100,6 +102,7 @@ export function AssetUploadDialog({
           status: formData.status,
           category: formData.category,
           uploaded_by: user.id,
+          brand_id: currentBrand.id,
         });
 
         if (dbError) throw dbError;

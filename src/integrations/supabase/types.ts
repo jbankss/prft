@@ -105,6 +105,7 @@ export type Database = {
       }
       asset_collections: {
         Row: {
+          brand_id: string | null
           cover_asset_id: string | null
           created_at: string
           created_by: string | null
@@ -114,6 +115,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brand_id?: string | null
           cover_asset_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -123,6 +125,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brand_id?: string | null
           cover_asset_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -132,6 +135,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "asset_collections_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "asset_collections_cover_asset_id_fkey"
             columns: ["cover_asset_id"]
@@ -339,6 +349,7 @@ export type Database = {
       }
       creative_assets: {
         Row: {
+          brand_id: string | null
           bucket: string
           category: string
           created_at: string
@@ -360,6 +371,7 @@ export type Database = {
           width: number | null
         }
         Insert: {
+          brand_id?: string | null
           bucket: string
           category?: string
           created_at?: string
@@ -381,6 +393,7 @@ export type Database = {
           width?: number | null
         }
         Update: {
+          brand_id?: string | null
           bucket?: string
           category?: string
           created_at?: string
@@ -402,6 +415,13 @@ export type Database = {
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "creative_assets_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "creative_assets_uploaded_by_fkey"
             columns: ["uploaded_by"]
@@ -472,6 +492,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          current_brand_id: string | null
           email: string
           full_name: string | null
           id: string
@@ -481,6 +502,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          current_brand_id?: string | null
           email: string
           full_name?: string | null
           id: string
@@ -490,20 +512,84 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          current_brand_id?: string | null
           email?: string
           full_name?: string | null
           id?: string
           role?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_current_brand_id_fkey"
+            columns: ["current_brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          approved: boolean
+          approved_at: string | null
+          approved_by: string | null
+          brand_id: string
+          created_at: string
+          id: string
+          requested_at: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          brand_id: string
+          created_at?: string
+          id?: string
+          requested_at?: string
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          brand_id?: string
+          created_at?: string
+          id?: string
+          requested_at?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_mj_admin: { Args: { _user_id: string }; Returns: boolean }
+      user_has_brand_access: {
+        Args: { _brand_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_has_brand_role: {
+        Args: { _brand_id: string; _role: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

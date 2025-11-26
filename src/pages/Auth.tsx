@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
 export default function Auth() {
@@ -12,17 +14,25 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log('Auth page: user', user?.email);
     if (user) {
-      console.log('Auth page: User logged in, redirecting to /');
       navigate('/');
     }
   }, [user, navigate]);
+
+  useEffect(() => {
+    const fetchBrands = async () => {
+      const { data } = await supabase.from('brands').select('*').order('name');
+      setBrands(data || []);
+    };
+    fetchBrands();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,15 +45,31 @@ export default function Auth() {
           setIsLoading(false);
           return;
         }
-        const { error } = await signUp(email, password, fullName);
+        if (selectedBrands.length === 0) {
+          toast.error('Please select at least one store');
+          setIsLoading(false);
+          return;
+        }
+        
+        const { error, data } = await signUp(email, password, fullName);
         if (error) {
           if (error.message.includes('already registered')) {
             toast.error('This email is already registered. Please sign in.');
           } else {
             toast.error(error.message);
           }
-        } else {
-          toast.success('Account created successfully!');
+        } else if (data.user) {
+          // Create user_roles entries for selected brands
+          const roleRequests = selectedBrands.map(brandId => ({
+            user_id: data.user.id,
+            brand_id: brandId,
+            role: 'user',
+            approved: false
+          }));
+          
+          await supabase.from('user_roles').insert(roleRequests);
+          
+          toast.success('Account created! Awaiting approval from MJ Fashion Team.');
           navigate('/');
         }
       } else {
@@ -76,18 +102,50 @@ export default function Auth() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {isSignUp && (
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
-                required
-                className="transition-all duration-200 focus:scale-[1.02]"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                  className="transition-all duration-200 focus:scale-[1.02]"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label>Select Store(s)</Label>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {brands.map((brand) => (
+                    <div key={brand.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={brand.id}
+                        checked={selectedBrands.includes(brand.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedBrands([...selectedBrands, brand.id]);
+                          } else {
+                            setSelectedBrands(selectedBrands.filter(id => id !== brand.id));
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor={brand.id}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {brand.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Your access request will be reviewed by MJ Fashion Team
+                </p>
+              </div>
+            </>
           )}
 
           <div className="space-y-2">
