@@ -1,4 +1,4 @@
-import { Home, Building2, Settings } from 'lucide-react';
+import { Home, Building2, Image, Settings } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import {
@@ -16,6 +16,7 @@ import {
 const items = [
   { title: 'Dashboard', url: '/', icon: Home },
   { title: 'Account Management', url: '/accounts', icon: Building2 },
+  { title: 'Photography & Creative', url: '/creative', icon: Image },
   { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
