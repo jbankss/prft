@@ -18,7 +18,7 @@ import Payments from "./pages/Payments";
 import Balances from "./pages/Balances";
 import Customers from "./pages/Customers";
 import Products from "./pages/Products";
-import Billing from "./pages/Billing";
+
 import Reports from "./pages/Reports";
 import Connect from "./pages/Connect";
 
@@ -40,7 +40,7 @@ const App = () => (
                 <Route path="/balances" element={<MainLayout><Balances /></MainLayout>} />
                 <Route path="/customers" element={<MainLayout><Customers /></MainLayout>} />
                 <Route path="/products" element={<MainLayout><Products /></MainLayout>} />
-                <Route path="/billing" element={<MainLayout><Billing /></MainLayout>} />
+                
                 <Route path="/reports" element={<MainLayout><Reports /></MainLayout>} />
                 <Route path="/connect" element={<MainLayout><Connect /></MainLayout>} />
                 <Route path="/accounts" element={<MainLayout><Accounts /></MainLayout>} />

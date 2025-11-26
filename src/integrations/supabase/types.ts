@@ -276,9 +276,12 @@ export type Database = {
       brandboom_payments: {
         Row: {
           amount: number
+          attachments: Json | null
           brand_id: string
           created_at: string
           id: string
+          invoice_number: string | null
+          notes: string | null
           order_id: string | null
           payment_date: string
           payment_method: string | null
@@ -288,9 +291,12 @@ export type Database = {
         }
         Insert: {
           amount: number
+          attachments?: Json | null
           brand_id: string
           created_at?: string
           id?: string
+          invoice_number?: string | null
+          notes?: string | null
           order_id?: string | null
           payment_date: string
           payment_method?: string | null
@@ -300,9 +306,12 @@ export type Database = {
         }
         Update: {
           amount?: number
+          attachments?: Json | null
           brand_id?: string
           created_at?: string
           id?: string
+          invoice_number?: string | null
+          notes?: string | null
           order_id?: string | null
           payment_date?: string
           payment_method?: string | null
