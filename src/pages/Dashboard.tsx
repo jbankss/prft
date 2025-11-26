@@ -1,48 +1,44 @@
-import { Card } from '@/components/ui/card';
-import { Building2, DollarSign, FileText, Users } from 'lucide-react';
-const stats = [{
-  label: 'Total Brands',
-  value: '0',
-  icon: Building2,
-  color: 'text-blue-500'
-}, {
-  label: 'Active Accounts',
-  value: '0',
-  icon: Users,
-  color: 'text-green-500'
-}, {
-  label: 'Pending Invoices',
-  value: '0',
-  icon: FileText,
-  color: 'text-orange-500'
-}, {
-  label: 'Total Revenue',
-  value: '$0',
-  icon: DollarSign,
-  color: 'text-purple-500'
-}];
+import { Link } from 'lucide-react';
+import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
+import { MetricBarChart } from '@/components/dashboard/MetricBarChart';
+import { GrossVolumeCard } from '@/components/dashboard/GrossVolumeCard';
+import { RetentionChart } from '@/components/dashboard/RetentionChart';
+import { TransactionsCard } from '@/components/dashboard/TransactionsCard';
+import { InsightsCard } from '@/components/dashboard/InsightsCard';
+
 export default function Dashboard() {
-  return <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome.</p>
+  return (
+    <div className="space-y-6 max-w-[1600px]">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h1 className="text-4xl font-bold">Overview</h1>
+          <button className="p-2 hover:bg-accent rounded-lg transition-colors">
+            <Link className="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
+        <DateRangePicker />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map(stat => <Card key={stat.label} className="p-6 glass shadow-apple-md hover:shadow-apple-lg transition-all duration-200 hover:scale-[1.02]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                <p className="text-2xl font-semibold">{stat.value}</p>
-              </div>
-              <stat.icon className={`h-8 w-8 ${stat.color}`} />
-            </div>
-          </Card>)}
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Payments Chart */}
+        <div className="lg:col-span-2">
+          <MetricBarChart />
+        </div>
+
+        {/* Right Column - Gross Volume */}
+        <div>
+          <GrossVolumeCard />
+        </div>
       </div>
 
-      <Card className="p-6 glass shadow-apple-md">
-        <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
-        <p className="text-muted-foreground">No recent activity</p>
-      </Card>
-    </div>;
+      {/* Bottom Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <RetentionChart />
+        <TransactionsCard />
+        <InsightsCard />
+      </div>
+    </div>
+  );
 }

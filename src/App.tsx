@@ -14,6 +14,13 @@ import Approvals from "./pages/Approvals";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import Payments from "./pages/Payments";
+import Balances from "./pages/Balances";
+import Customers from "./pages/Customers";
+import Products from "./pages/Products";
+import Billing from "./pages/Billing";
+import Reports from "./pages/Reports";
+import Connect from "./pages/Connect";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +36,13 @@ const App = () => (
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
+                <Route path="/payments" element={<MainLayout><Payments /></MainLayout>} />
+                <Route path="/balances" element={<MainLayout><Balances /></MainLayout>} />
+                <Route path="/customers" element={<MainLayout><Customers /></MainLayout>} />
+                <Route path="/products" element={<MainLayout><Products /></MainLayout>} />
+                <Route path="/billing" element={<MainLayout><Billing /></MainLayout>} />
+                <Route path="/reports" element={<MainLayout><Reports /></MainLayout>} />
+                <Route path="/connect" element={<MainLayout><Connect /></MainLayout>} />
                 <Route path="/accounts" element={<MainLayout><Accounts /></MainLayout>} />
                 <Route path="/creative" element={<MainLayout><Creative /></MainLayout>} />
                 <Route path="/approvals" element={<MainLayout><Approvals /></MainLayout>} />
