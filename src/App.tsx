@@ -18,7 +18,7 @@ import Payments from "./pages/Payments";
 import Balances from "./pages/Balances";
 import Customers from "./pages/Customers";
 import Products from "./pages/Products";
-
+import Integrations from "./pages/Integrations";
 import Reports from "./pages/Reports";
 import Connect from "./pages/Connect";
 
@@ -45,6 +45,7 @@ const App = () => (
                 <Route path="/connect" element={<MainLayout><Connect /></MainLayout>} />
                 <Route path="/accounts" element={<MainLayout><Accounts /></MainLayout>} />
                 <Route path="/creative" element={<MainLayout><Creative /></MainLayout>} />
+                <Route path="/integrations" element={<MainLayout><Integrations /></MainLayout>} />
                 <Route path="/approvals" element={<MainLayout><Approvals /></MainLayout>} />
                 <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
