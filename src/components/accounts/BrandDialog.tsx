@@ -124,7 +124,7 @@ export function BrandDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass max-w-2xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{brand ? 'Edit Brand' : 'Create New Brand'}</DialogTitle>
         </DialogHeader>

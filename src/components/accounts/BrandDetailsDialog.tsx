@@ -49,10 +49,10 @@ export function BrandDetailsDialog({
 
   return (
     <Dialog open={!!brandId} onOpenChange={() => onClose()}>
-      <DialogContent className="glass max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center overflow-hidden">
               {brand?.logo_url ? (
                 <img src={brand.logo_url} alt={brand.name} className="w-full h-full object-cover" />
               ) : (

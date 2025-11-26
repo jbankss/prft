@@ -64,7 +64,7 @@ export function InvoiceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Invoice</DialogTitle>
         </DialogHeader>

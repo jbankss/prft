@@ -162,7 +162,7 @@ export function AssetUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass max-w-2xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Upload Creative Assets</DialogTitle>
         </DialogHeader>
