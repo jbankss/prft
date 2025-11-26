@@ -102,71 +102,93 @@ export function AssetDetailsDialog({
 
   return (
     <Dialog open={!!asset} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">{editing ? 'Edit Asset' : asset.title || asset.file_name}</DialogTitle>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="text-2xl font-semibold">
+            {editing ? 'Edit Asset' : asset.title || asset.file_name}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-4">
             {asset.mime_type.startsWith('image/') ? (
-              <img
-                src={getAssetUrl()}
-                alt={asset.title || asset.file_name}
-                className="w-full rounded-xl shadow-apple-md border border-border/50"
-              />
+              <div className="rounded-2xl overflow-hidden shadow-apple-lg border border-border/30 bg-card/50">
+                <img
+                  src={getAssetUrl()}
+                  alt={asset.title || asset.file_name}
+                  className="w-full object-contain"
+                />
+              </div>
             ) : asset.mime_type.startsWith('video/') ? (
-              <video
-                src={getAssetUrl()}
-                controls
-                className="w-full rounded-xl shadow-apple-md border border-border/50"
-              />
+              <div className="rounded-2xl overflow-hidden shadow-apple-lg border border-border/30">
+                <video
+                  src={getAssetUrl()}
+                  controls
+                  className="w-full"
+                />
+              </div>
             ) : (
-              <div className="w-full aspect-video rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center">
-                <p className="text-muted-foreground font-medium">{asset.file_type.toUpperCase()} File</p>
+              <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-primary/5 via-accent/5 to-secondary/5 border border-border/30 flex items-center justify-center shadow-apple-md">
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-3 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-primary">{asset.file_type.toUpperCase()}</span>
+                  </div>
+                  <p className="text-sm font-medium text-foreground/70">Document File</p>
+                </div>
               </div>
             )}
 
-            <div className="flex gap-2">
-              <Button onClick={handleDownload} className="flex-1">
+            <div className="flex gap-3">
+              <Button 
+                onClick={handleDownload} 
+                className="flex-1 shadow-sm hover:shadow-md transition-shadow"
+                size="lg"
+              >
                 <Download className="h-4 w-4 mr-2" />
-                Download Original
+                Download
               </Button>
               {(user?.id === asset.uploaded_by || asset.uploaded_by === user?.id) && (
-                <Button variant="destructive" onClick={handleDelete}>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDelete}
+                  className="shadow-sm hover:shadow-md transition-shadow"
+                  size="lg"
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {editing ? (
               <>
                 <div className="space-y-2">
-                  <Label>Title</Label>
+                  <Label className="text-sm font-medium">Title</Label>
                   <Input
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="h-11"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Description</Label>
+                  <Label className="text-sm font-medium">Description</Label>
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={4}
+                    className="resize-none"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Status</Label>
+                  <Label className="text-sm font-medium">Status</Label>
                   <Select
                     value={formData.status}
                     onValueChange={(value) => setFormData({ ...formData, status: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -180,67 +202,81 @@ export function AssetDetailsDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Tags (comma-separated)</Label>
+                  <Label className="text-sm font-medium">Tags (comma-separated)</Label>
                   <Input
                     value={formData.tags}
                     onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                    placeholder="e.g., summer, campaign, hero"
+                    className="h-11"
                   />
                 </div>
 
-                <div className="flex gap-2">
-                  <Button onClick={handleSave} className="flex-1">
+                <div className="flex gap-3 pt-2">
+                  <Button 
+                    onClick={handleSave} 
+                    className="flex-1 shadow-sm hover:shadow-md transition-shadow"
+                    size="lg"
+                  >
                     <Save className="h-4 w-4 mr-2" />
                     Save Changes
                   </Button>
-                  <Button variant="outline" onClick={() => setEditing(false)}>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setEditing(false)}
+                    size="lg"
+                  >
                     Cancel
                   </Button>
                 </div>
               </>
             ) : (
               <>
-                <div>
-                  <Label className="text-muted-foreground">File Name</Label>
-                  <p className="font-medium">{asset.file_name}</p>
+                <div className="p-4 rounded-xl bg-card/50 border border-border/30">
+                  <Label className="text-xs font-medium uppercase tracking-wide text-foreground/60">File Name</Label>
+                  <p className="font-medium mt-1 text-foreground">{asset.file_name}</p>
                 </div>
 
                 {asset.description && (
-                  <div>
-                    <Label className="text-muted-foreground">Description</Label>
-                    <p>{asset.description}</p>
+                  <div className="p-4 rounded-xl bg-card/50 border border-border/30">
+                    <Label className="text-xs font-medium uppercase tracking-wide text-foreground/60">Description</Label>
+                    <p className="mt-1 text-foreground/90">{asset.description}</p>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Category</Label>
-                    <p className="capitalize">{asset.category}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 rounded-xl bg-card/50 border border-border/30">
+                    <Label className="text-xs font-medium uppercase tracking-wide text-foreground/60">Category</Label>
+                    <p className="capitalize mt-1 font-medium text-foreground">{asset.category}</p>
                   </div>
-                  <div>
-                    <Label className="text-muted-foreground">Status</Label>
-                    <Badge className="capitalize">{asset.status}</Badge>
+                  <div className="p-4 rounded-xl bg-card/50 border border-border/30">
+                    <Label className="text-xs font-medium uppercase tracking-wide text-foreground/60">Status</Label>
+                    <div className="mt-1">
+                      <Badge variant="secondary" className="capitalize">
+                        {asset.status}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">File Size</Label>
-                    <p>{formatFileSize(asset.file_size)}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 rounded-xl bg-card/50 border border-border/30">
+                    <Label className="text-xs font-medium uppercase tracking-wide text-foreground/60">File Size</Label>
+                    <p className="mt-1 font-medium text-foreground">{formatFileSize(asset.file_size)}</p>
                   </div>
                   {asset.width && asset.height && (
-                    <div>
-                      <Label className="text-muted-foreground">Dimensions</Label>
-                      <p>{asset.width} × {asset.height}</p>
+                    <div className="p-4 rounded-xl bg-card/50 border border-border/30">
+                      <Label className="text-xs font-medium uppercase tracking-wide text-foreground/60">Dimensions</Label>
+                      <p className="mt-1 font-medium text-foreground">{asset.width} × {asset.height}</p>
                     </div>
                   )}
                 </div>
 
                 {asset.tags && asset.tags.length > 0 && (
-                  <div>
-                    <Label className="text-muted-foreground">Tags</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="p-4 rounded-xl bg-card/50 border border-border/30">
+                    <Label className="text-xs font-medium uppercase tracking-wide text-foreground/60 mb-2 block">Tags</Label>
+                    <div className="flex flex-wrap gap-2">
                       {asset.tags.map((tag: string, i: number) => (
-                        <Badge key={i} variant="outline">
+                        <Badge key={i} variant="outline" className="rounded-full">
                           {tag}
                         </Badge>
                       ))}
@@ -248,15 +284,20 @@ export function AssetDetailsDialog({
                   </div>
                 )}
 
-                <div>
-                  <Label className="text-muted-foreground">Uploaded</Label>
-                  <p>{new Date(asset.created_at).toLocaleString()}</p>
+                <div className="p-4 rounded-xl bg-card/50 border border-border/30">
+                  <Label className="text-xs font-medium uppercase tracking-wide text-foreground/60">Uploaded</Label>
+                  <p className="mt-1 text-foreground">{new Date(asset.created_at).toLocaleString()}</p>
                   {asset.profiles?.full_name && (
-                    <p className="text-sm text-muted-foreground">by {asset.profiles.full_name}</p>
+                    <p className="text-sm text-foreground/60 mt-1">by {asset.profiles.full_name}</p>
                   )}
                 </div>
 
-                <Button onClick={() => setEditing(true)} variant="outline" className="w-full">
+                <Button 
+                  onClick={() => setEditing(true)} 
+                  variant="outline" 
+                  className="w-full shadow-sm hover:shadow-md transition-shadow"
+                  size="lg"
+                >
                   Edit Details
                 </Button>
               </>
