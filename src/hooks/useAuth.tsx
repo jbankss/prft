@@ -21,19 +21,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('useAuth: Setting up auth state listener');
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('useAuth: Auth state changed', event, session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('useAuth: Initial session', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('useAuth: Cleaning up auth listener');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {

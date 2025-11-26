@@ -13,20 +13,26 @@ export function MainLayout({ children }: { children: ReactNode }) {
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
+    console.log('MainLayout: user', user?.email, 'loading', loading);
     if (!loading && !user) {
+      console.log('MainLayout: Redirecting to /auth');
       navigate('/auth');
     }
   }, [user, loading, navigate]);
 
+  console.log('MainLayout: Rendering. Loading:', loading, 'User:', user?.email);
+
   if (loading) {
+    console.log('MainLayout: Showing loading state');
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
   if (!user) {
+    console.log('MainLayout: No user, returning null (should redirect)');
     return null;
   }
 

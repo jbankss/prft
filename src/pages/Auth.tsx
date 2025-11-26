@@ -17,7 +17,9 @@ export default function Auth() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('Auth page: user', user?.email);
     if (user) {
+      console.log('Auth page: User logged in, redirecting to /');
       navigate('/');
     }
   }, [user, navigate]);
