@@ -10,7 +10,6 @@ const navItems = [
   { label: 'Balances', path: '/balances' },
   { label: 'Brands', path: '/customers' },
   { label: 'Products', path: '/products' },
-  { label: 'Billing', path: '/billing' },
   { label: 'Reports', path: '/reports' },
   { label: 'Connect', path: '/connect' },
 ];
