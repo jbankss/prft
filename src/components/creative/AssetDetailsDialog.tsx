@@ -102,9 +102,9 @@ export function AssetDetailsDialog({
 
   return (
     <Dialog open={!!asset} onOpenChange={onClose}>
-      <DialogContent className="glass max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit Asset' : asset.title || asset.file_name}</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">{editing ? 'Edit Asset' : asset.title || asset.file_name}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -113,17 +113,17 @@ export function AssetDetailsDialog({
               <img
                 src={getAssetUrl()}
                 alt={asset.title || asset.file_name}
-                className="w-full rounded-lg shadow-apple-md"
+                className="w-full rounded-xl shadow-apple-md border border-border/50"
               />
             ) : asset.mime_type.startsWith('video/') ? (
               <video
                 src={getAssetUrl()}
                 controls
-                className="w-full rounded-lg shadow-apple-md"
+                className="w-full rounded-xl shadow-apple-md border border-border/50"
               />
             ) : (
-              <div className="w-full aspect-video rounded-lg bg-muted flex items-center justify-center">
-                <p className="text-muted-foreground">{asset.file_type.toUpperCase()} File</p>
+              <div className="w-full aspect-video rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center">
+                <p className="text-muted-foreground font-medium">{asset.file_type.toUpperCase()} File</p>
               </div>
             )}
 

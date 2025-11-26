@@ -61,7 +61,7 @@ export function ChargeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Charge</DialogTitle>
         </DialogHeader>
