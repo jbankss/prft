@@ -44,30 +44,8 @@ serve(async (req) => {
   let order: any = null;
 
   try {
-    const webhookSecret = Deno.env.get('SHOPIFY_WEBHOOK_SECRET');
-    if (!webhookSecret) {
-      console.error('SHOPIFY_WEBHOOK_SECRET not configured');
-      return new Response('Webhook secret not configured', { status: 500 });
-    }
-
-    // Get the HMAC header
-    const hmacHeader = req.headers.get('X-Shopify-Hmac-Sha256');
-    if (!hmacHeader) {
-      console.error('Missing HMAC header');
-      return new Response('Unauthorized', { status: 401 });
-    }
-
     // Get raw body for verification
     const rawBody = await req.text();
-    
-    // Verify webhook signature
-    const isValid = await verifyShopifyWebhook(rawBody, hmacHeader, webhookSecret);
-    if (!isValid) {
-      console.error('Invalid webhook signature');
-      return new Response('Unauthorized', { status: 401 });
-    }
-
-    // Parse the order data
     order = JSON.parse(rawBody);
     console.log('Processing Shopify order:', order.id);
 
@@ -99,9 +77,9 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verify brand exists and is "Enzo Milwaukee"
+    // Verify brand exists and get webhook secret
     const { data: brand } = await supabase
       .from('brands')
       .select('id, name')
@@ -114,6 +92,44 @@ serve(async (req) => {
     }
 
     console.log('Processing order for brand:', brand.name);
+
+    // Get webhook secret from database
+    const { data: integration, error: integrationError } = await supabase
+      .from('brand_integrations')
+      .select('webhook_secret')
+      .eq('brand_id', brandId)
+      .eq('integration_type', 'shopify')
+      .eq('is_active', true)
+      .single();
+
+    if (integrationError || !integration?.webhook_secret) {
+      console.error('Shopify integration not configured for brand:', brandId);
+      
+      await supabase.from('webhook_logs').insert({
+        brand_id: brandId,
+        integration_type: 'shopify',
+        event_type: 'order_created',
+        status: 'error',
+        request_data: order,
+        error_message: 'Shopify integration not configured for this brand',
+        shopify_order_id: order.id.toString()
+      });
+      
+      return new Response('Shopify integration not configured', { status: 400 });
+    }
+
+    // Verify the webhook signature
+    const hmacHeader = req.headers.get('X-Shopify-Hmac-Sha256');
+    if (!hmacHeader) {
+      console.error('Missing HMAC header');
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    const isValid = await verifyShopifyWebhook(rawBody, hmacHeader, integration.webhook_secret);
+    if (!isValid) {
+      console.error('Invalid webhook signature');
+      return new Response('Unauthorized', { status: 401 });
+    }
 
     // Check if we've already processed this order
     const { data: existingInvoice } = await supabase
@@ -193,16 +209,14 @@ serve(async (req) => {
       
       invoicesToCreate.push({
         account_id: account.id,
-        brand_id: account.brand_id,
         invoice_number: `SHOP-${order.order_number}-${item.id}`,
         amount: amount,
-        description: `Shopify Order #${order.order_number} - ${item.name}`,
         status: 'paid',
         paid_date: new Date().toISOString().split('T')[0],
         due_date: new Date().toISOString().split('T')[0],
         shopify_order_id: order.id.toString(),
         source: 'shopify',
-        notes: `Vendor: ${vendor}, Quantity: ${item.quantity}`,
+        notes: `Vendor: ${vendor}, Quantity: ${item.quantity}, Product: ${item.name}`,
       });
 
       console.log(`Processed vendor "${vendor}" for account "${account.account_name}"`);
