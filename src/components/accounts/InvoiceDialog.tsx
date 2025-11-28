@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { logActivity } from '@/lib/activityLogger';
 
 export function InvoiceDialog({
   open,
@@ -36,14 +37,22 @@ export function InvoiceDialog({
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('invoices').insert({
+      const { data: newInvoice, error } = await supabase.from('invoices').insert({
         account_id: accountId,
         ...formData,
         amount: parseFloat(formData.amount),
         created_by: user.id,
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Log the activity
+      await logActivity({
+        action: 'created',
+        entityType: 'invoice',
+        entityId: newInvoice.id,
+        changes: { invoice_number: formData.invoice_number, amount: formData.amount, status: formData.status }
+      });
 
       toast.success('Invoice created successfully');
       setFormData({

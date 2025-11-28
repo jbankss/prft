@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { logActivity } from '@/lib/activityLogger';
 
 export function AccountDialog({
   open,
@@ -36,13 +37,21 @@ export function AccountDialog({
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('accounts').insert({
+      const { data: newAccount, error } = await supabase.from('accounts').insert({
         ...formData,
         balance: parseFloat(formData.balance),
         created_by: user.id,
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Log the activity
+      await logActivity({
+        action: 'created',
+        entityType: 'account',
+        entityId: newAccount.id,
+        changes: { account_name: formData.account_name, balance: formData.balance }
+      });
 
       toast.success('Account created successfully');
       setFormData({

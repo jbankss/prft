@@ -7,6 +7,10 @@ import { AccountsList } from '@/components/accounts/AccountsList';
 import { AccountDialog } from '@/components/accounts/AccountDialog';
 import { AccountsSidebar } from '@/components/accounts/AccountsSidebar';
 import { AccountsWidgets } from '@/components/accounts/AccountsWidgets';
+import { ActivityTimeline } from '@/components/accounts/ActivityTimeline';
+import { BalancesView } from '@/components/accounts/BalancesView';
+import { PaymentsView } from '@/components/accounts/PaymentsView';
+import { CalendarView } from '@/components/accounts/CalendarView';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { toast } from 'sonner';
 export default function Accounts() {
@@ -16,6 +20,7 @@ export default function Accounts() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAccountDialog, setShowAccountDialog] = useState(false);
+  const [activeView, setActiveView] = useState('overview');
   const fetchData = async () => {
     if (!currentBrand?.id) return;
     try {
@@ -75,40 +80,55 @@ export default function Accounts() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <AccountsSidebar />
+        <AccountsSidebar activeView={activeView} onViewChange={setActiveView} />
 
         {/* Center Content */}
         <div className="flex-1 overflow-auto p-8">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Action Bar */}
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">Accounts</h2>
-              <Button onClick={() => setShowAccountDialog(true)} className="hover-lift">
-                <Plus className="h-4 w-4 mr-2" />
-                New Account
-              </Button>
+              <h2 className="text-2xl font-semibold capitalize">{activeView}</h2>
+              {activeView === 'overview' && (
+                <Button onClick={() => setShowAccountDialog(true)} className="hover-lift">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Account
+                </Button>
+              )}
             </div>
 
-            {/* Accounts List */}
-            {accounts.length === 0 ? <Card className="p-12 animated-gradient text-center border-border/40">
-                <p className="text-muted-foreground mb-4">
-                  No accounts yet. Create your first account for {currentBrand.name}.
-                </p>
-                <Button onClick={() => setShowAccountDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Account
-                </Button>
-              </Card> : <AccountsList accounts={accounts} brands={[currentBrand]} onRefresh={fetchData} />}
+            {/* View Content */}
+            {activeView === 'overview' && (
+              accounts.length === 0 ? (
+                <Card className="p-12 animated-gradient text-center border-border/40">
+                  <p className="text-muted-foreground mb-4">
+                    No accounts yet. Create your first account for {currentBrand.name}.
+                  </p>
+                  <Button onClick={() => setShowAccountDialog(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Account
+                  </Button>
+                </Card>
+              ) : (
+                <AccountsList accounts={accounts} brands={[currentBrand]} onRefresh={fetchData} />
+              )
+            )}
+
+            {activeView === 'activity' && <ActivityTimeline brandId={currentBrand.id} />}
+            {activeView === 'balances' && <BalancesView brandId={currentBrand.id} />}
+            {activeView === 'payments' && <PaymentsView brandId={currentBrand.id} />}
+            {activeView === 'calendar' && <CalendarView brandId={currentBrand.id} />}
           </div>
         </div>
 
-        {/* Right Sidebar - Widgets */}
-        <div className="w-80 border-l border-border/40 bg-background/50 backdrop-blur-sm p-6 overflow-auto">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-            Performance Metrics
-          </h3>
-          <AccountsWidgets />
-        </div>
+        {/* Right Sidebar - Widgets (only on overview) */}
+        {activeView === 'overview' && (
+          <div className="w-80 border-l border-border/40 bg-background/50 backdrop-blur-sm p-6 overflow-auto">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+              Performance Metrics
+            </h3>
+            <AccountsWidgets />
+          </div>
+        )}
       </div>
 
       <AccountDialog open={showAccountDialog} onOpenChange={setShowAccountDialog} brands={[currentBrand]} onSuccess={fetchData} />
