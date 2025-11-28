@@ -1,10 +1,7 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Calendar, Zap, Store, User, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrandSwitcher } from './BrandSwitcher';
-import { StoreSettingsDialog } from './StoreSettingsDialog';
-import { UserSettingsDialog } from './UserSettingsDialog';
 import { useBrandContext } from '@/hooks/useBrandContext';
 const navItems = [{
   label: 'Home',
@@ -29,12 +26,11 @@ const navItems = [{
   path: '/customers'
 }];
 export function TopNav() {
+  const navigate = useNavigate();
   const location = useLocation();
   const {
     currentBrand
   } = useBrandContext();
-  const [storeSettingsOpen, setStoreSettingsOpen] = useState(false);
-  const [userSettingsOpen, setUserSettingsOpen] = useState(false);
   return <header className="border-b bg-card">
       <div className="flex items-center h-16 px-6">
         {/* Logo */}
@@ -61,19 +57,16 @@ export function TopNav() {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setStoreSettingsOpen(true)} className="gap-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/store-settings')} className="gap-2">
             <Store className="h-4 w-4" />
             
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setUserSettingsOpen(true)} className="gap-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/user-settings')} className="gap-2">
             <User className="h-4 w-4" />
             
           </Button>
           <BrandSwitcher />
         </div>
       </div>
-
-      <StoreSettingsDialog open={storeSettingsOpen} onOpenChange={setStoreSettingsOpen} />
-      <UserSettingsDialog open={userSettingsOpen} onOpenChange={setUserSettingsOpen} />
     </header>;
 }

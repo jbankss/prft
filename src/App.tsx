@@ -21,6 +21,8 @@ import Products from "./pages/Products";
 import Integrations from "./pages/Integrations";
 import Reports from "./pages/Reports";
 import Connect from "./pages/Connect";
+import StoreSettings from "./pages/StoreSettings";
+import UserSettings from "./pages/UserSettings";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +50,8 @@ const App = () => (
                 <Route path="/integrations" element={<MainLayout><Integrations /></MainLayout>} />
                 <Route path="/approvals" element={<MainLayout><Approvals /></MainLayout>} />
                 <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
+                <Route path="/store-settings" element={<MainLayout><StoreSettings /></MainLayout>} />
+                <Route path="/user-settings" element={<MainLayout><UserSettings /></MainLayout>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
