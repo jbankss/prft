@@ -9,39 +9,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { Upload, Loader2, Store, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
 export default function StoreSettings() {
   const navigate = useNavigate();
-  const { currentBrand, refreshBrands } = useBrandContext();
+  const {
+    currentBrand,
+    refreshBrands
+  } = useBrandContext();
   const [uploading, setUploading] = useState(false);
   const [updating, setUpdating] = useState(false);
-
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
       const file = event.target.files?.[0];
       if (!file || !currentBrand) return;
-
       const fileExt = file.name.split('.').pop();
       const fileName = `${currentBrand.id}/${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('brand-logos')
-        .upload(fileName, file, { upsert: true });
-
+      const {
+        error: uploadError
+      } = await supabase.storage.from('brand-logos').upload(fileName, file, {
+        upsert: true
+      });
       if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('brand-logos')
-        .getPublicUrl(fileName);
-
-      const { error: updateError } = await supabase
-        .from('brands')
-        .update({ logo_url: publicUrl })
-        .eq('id', currentBrand.id);
-
+      const {
+        data: {
+          publicUrl
+        }
+      } = supabase.storage.from('brand-logos').getPublicUrl(fileName);
+      const {
+        error: updateError
+      } = await supabase.from('brands').update({
+        logo_url: publicUrl
+      }).eq('id', currentBrand.id);
       if (updateError) throw updateError;
-
       await refreshBrands();
       toast.success('Logo updated successfully');
     } catch (error: any) {
@@ -50,30 +49,23 @@ export default function StoreSettings() {
       setUploading(false);
     }
   };
-
   const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!currentBrand) return;
-
     try {
       setUpdating(true);
       const formData = new FormData(e.currentTarget);
-      
       const updates = {
         name: formData.get('name') as string,
         description: formData.get('description') as string,
         website: formData.get('website') as string,
         contact_email: formData.get('contact_email') as string,
-        contact_phone: formData.get('contact_phone') as string,
+        contact_phone: formData.get('contact_phone') as string
       };
-
-      const { error } = await supabase
-        .from('brands')
-        .update(updates)
-        .eq('id', currentBrand.id);
-
+      const {
+        error
+      } = await supabase.from('brands').update(updates).eq('id', currentBrand.id);
       if (error) throw error;
-
       await refreshBrands();
       toast.success('Store settings updated successfully');
       navigate(-1);
@@ -83,11 +75,8 @@ export default function StoreSettings() {
       setUpdating(false);
     }
   };
-
   if (!currentBrand) return null;
-
-  return (
-    <div className="min-h-screen bg-background p-6">
+  return <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
@@ -110,47 +99,23 @@ export default function StoreSettings() {
           <Card>
             <CardHeader>
               <CardTitle>Store Logo</CardTitle>
-              <CardDescription>Upload your brand logo to appear across the platform</CardDescription>
+              
             </CardHeader>
             <CardContent>
               <div className="flex items-start gap-6">
                 <div className="w-32 h-32 rounded-2xl border-2 border-border bg-card flex items-center justify-center overflow-hidden">
-                  {currentBrand.logo_url ? (
-                    <img 
-                      src={currentBrand.logo_url} 
-                      alt={currentBrand.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Store className="h-12 w-12 text-muted-foreground" />
-                  )}
+                  {currentBrand.logo_url ? <img src={currentBrand.logo_url} alt={currentBrand.name} className="w-full h-full object-cover" /> : <Store className="h-12 w-12 text-muted-foreground" />}
                 </div>
                 <div className="flex-1">
-                  <Input
-                    id="logo"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleLogoUpload}
-                    disabled={uploading}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('logo')?.click()}
-                    disabled={uploading}
-                  >
-                    {uploading ? (
-                      <>
+                  <Input id="logo" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploading} />
+                  <Button type="button" variant="outline" onClick={() => document.getElementById('logo')?.click()} disabled={uploading}>
+                    {uploading ? <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Uploading...
-                      </>
-                    ) : (
-                      <>
+                      </> : <>
                         <Upload className="mr-2 h-4 w-4" />
                         Upload Logo
-                      </>
-                    )}
+                      </>}
                   </Button>
                   <p className="text-sm text-muted-foreground mt-3">
                     Recommended size: 512x512px. Supports PNG, JPG, or SVG.
@@ -163,62 +128,33 @@ export default function StoreSettings() {
           <Card>
             <CardHeader>
               <CardTitle>Store Information</CardTitle>
-              <CardDescription>Basic details about your store</CardDescription>
+              
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Store Name *</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  defaultValue={currentBrand.name}
-                  required
-                />
+                <Input id="name" name="name" defaultValue={currentBrand.name} required />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  defaultValue={currentBrand.description || ''}
-                  rows={4}
-                  placeholder="Brief description of your store..."
-                />
+                <Textarea id="description" name="description" defaultValue={currentBrand.description || ''} rows={4} placeholder="Brief description of your store..." />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="website">Website</Label>
-                <Input
-                  id="website"
-                  name="website"
-                  type="url"
-                  defaultValue={currentBrand.website || ''}
-                  placeholder="https://example.com"
-                />
+                <Input id="website" name="website" type="url" defaultValue={currentBrand.website || ''} placeholder="https://example.com" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="contact_email">Contact Email</Label>
-                  <Input
-                    id="contact_email"
-                    name="contact_email"
-                    type="email"
-                    defaultValue={currentBrand.contact_email || ''}
-                    placeholder="contact@example.com"
-                  />
+                  <Input id="contact_email" name="contact_email" type="email" defaultValue={currentBrand.contact_email || ''} placeholder="contact@example.com" />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="contact_phone">Contact Phone</Label>
-                  <Input
-                    id="contact_phone"
-                    name="contact_phone"
-                    type="tel"
-                    defaultValue={currentBrand.contact_phone || ''}
-                    placeholder="+1 (555) 123-4567"
-                  />
+                  <Input id="contact_phone" name="contact_phone" type="tel" defaultValue={currentBrand.contact_phone || ''} placeholder="+1 (555) 123-4567" />
                 </div>
               </div>
             </CardContent>
@@ -229,18 +165,13 @@ export default function StoreSettings() {
               Cancel
             </Button>
             <Button type="submit" disabled={updating}>
-              {updating ? (
-                <>
+              {updating ? <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
+                </> : 'Save Changes'}
             </Button>
           </div>
         </form>
       </div>
-    </div>
-  );
+    </div>;
 }
