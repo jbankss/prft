@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, DollarSign, FileText, Receipt, MessageSquare, Pencil, TrendingUp, TrendingDown, Package, Calendar } from 'lucide-react';
+import { Building2, DollarSign, FileText, Receipt, MessageSquare, Pencil, TrendingUp, TrendingDown, Package, Calendar, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AccountDetails } from './AccountDetails';
@@ -32,6 +34,7 @@ export function AccountsList({
 }) {
   const [expandedAccounts, setExpandedAccounts] = useState<Record<string, boolean>>({});
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
 
   useEffect(() => {
     // Subscribe to real-time changes
@@ -56,6 +59,26 @@ export function AccountsList({
 
   const handleEdit = (account: Account) => {
     setSelectedAccount(account);
+  };
+
+  const handleDelete = async () => {
+    if (!accountToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('accounts')
+        .delete()
+        .eq('id', accountToDelete.id);
+
+      if (error) throw error;
+
+      toast.success(`Account "${accountToDelete.account_name}" deleted successfully`);
+      setAccountToDelete(null);
+      onRefresh();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast.error('Failed to delete account');
+    }
   };
 
   // Calculate real metrics from actual data
@@ -129,6 +152,13 @@ export function AccountsList({
                     onClick={() => handleEdit(account)}
                   >
                     <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAccountToDelete(account)}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                   <Button
                     variant={expandedAccounts[account.id] ? 'secondary' : 'outline'}
@@ -225,6 +255,24 @@ export function AccountsList({
           }}
         />
       )}
+
+      <AlertDialog open={!!accountToDelete} onOpenChange={(open) => !open && setAccountToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{accountToDelete?.account_name}"? This action cannot be undone.
+              All associated invoices and charges will also be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -9,7 +9,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Copy, Check, ShoppingBag, CreditCard, Package, MessageSquare, Send, CheckCircle2, XCircle, AlertCircle, Clock, Activity, Zap } from 'lucide-react';
+import { Copy, Check, ShoppingBag, CreditCard, Package, MessageSquare, Send, CheckCircle2, XCircle, AlertCircle, Clock, Activity, Zap, ExternalLink } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -42,6 +44,7 @@ export default function Integrations() {
   const [isSaving, setIsSaving] = useState(false);
   const [isConfigured, setIsConfigured] = useState(false);
   const [lastSuccessfulWebhook, setLastSuccessfulWebhook] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<WebhookLog | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const webhookUrl = currentBrand
@@ -591,68 +594,83 @@ export default function Integrations() {
                     <p>No webhook events yet</p>
                   </div>
                 ) : (
-                  webhookLogs.map((log) => (
-                    <Collapsible key={log.id}>
-                      <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
-                        <div className="flex items-center gap-3 flex-1">
-                          {getStatusIcon(log.status)}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-sm">
-                                {log.event_type} #{log.shopify_order_id}
+                  webhookLogs.map((log) => {
+                    const orderNumber = log.request_data?.name || log.shopify_order_id;
+                    return (
+                      <Collapsible key={log.id}>
+                        <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
+                          <div className="flex items-center gap-3 flex-1">
+                            {getStatusIcon(log.status)}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm">
+                                  {log.event_type} {orderNumber}
+                                </p>
+                                <Badge variant={getStatusBadgeVariant(log.status)}>
+                                  {log.status}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {format(new Date(log.created_at), 'PPpp')}
                               </p>
-                              <Badge variant={getStatusBadgeVariant(log.status)}>
-                                {log.status}
-                              </Badge>
+                              {log.response_summary && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {log.response_summary}
+                                </p>
+                              )}
                             </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {format(new Date(log.created_at), 'PPpp')}
-                            </p>
-                            {log.response_summary && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {log.response_summary}
-                              </p>
+                          </div>
+                          <div className="flex gap-2">
+                            {log.request_data?.line_items && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedOrder(log)}
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                View Order
+                              </Button>
                             )}
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                View Raw Data
+                              </Button>
+                            </CollapsibleTrigger>
                           </div>
                         </div>
-                        <CollapsibleTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            View Details
-                          </Button>
-                        </CollapsibleTrigger>
-                      </div>
-                      <CollapsibleContent>
-                        <div className="p-4 bg-muted/50 border-x border-b rounded-b-lg space-y-4">
-                          {log.error_message && (
-                            <div>
-                              <p className="text-sm font-medium text-red-600">Error:</p>
-                              <p className="text-xs font-mono bg-red-50 dark:bg-red-950 p-2 rounded mt-1">
-                                {log.error_message}
-                              </p>
-                            </div>
-                          )}
-                          {log.request_data && (
-                            <div>
-                              <p className="text-sm font-medium">Request Data:</p>
-                              <pre className="text-xs font-mono bg-background p-2 rounded mt-1 overflow-auto max-h-40">
-                                {JSON.stringify(log.request_data, null, 2)}
-                              </pre>
-                            </div>
-                          )}
-                          <div className="grid grid-cols-2 gap-4 text-xs">
-                            <div>
-                              <span className="text-muted-foreground">Invoices Created:</span>
-                              <span className="ml-2 font-medium">{log.invoices_created || 0}</span>
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Accounts Created:</span>
-                              <span className="ml-2 font-medium">{log.accounts_created || 0}</span>
+                        <CollapsibleContent>
+                          <div className="p-4 bg-muted/50 border-x border-b rounded-b-lg space-y-4">
+                            {log.error_message && (
+                              <div>
+                                <p className="text-sm font-medium text-red-600">Error:</p>
+                                <p className="text-xs font-mono bg-red-50 dark:bg-red-950 p-2 rounded mt-1">
+                                  {log.error_message}
+                                </p>
+                              </div>
+                            )}
+                            {log.request_data && (
+                              <div>
+                                <p className="text-sm font-medium">Request Data:</p>
+                                <pre className="text-xs font-mono bg-background p-2 rounded mt-1 overflow-auto max-h-40">
+                                  {JSON.stringify(log.request_data, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-4 text-xs">
+                              <div>
+                                <span className="text-muted-foreground">Invoices Created:</span>
+                                <span className="ml-2 font-medium">{log.invoices_created || 0}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Accounts Created:</span>
+                                <span className="ml-2 font-medium">{log.accounts_created || 0}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ))
+                        </CollapsibleContent>
+                      </Collapsible>
+                    );
+                  })
                 )}
               </div>
             </CardContent>
@@ -689,6 +707,121 @@ export default function Integrations() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Order Details Dialog */}
+      <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Order Details: {selectedOrder?.request_data?.name}</DialogTitle>
+            <DialogDescription>
+              Complete order information from Shopify
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedOrder?.request_data && (
+            <div className="space-y-6">
+              {/* Order Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                <div>
+                  <p className="text-xs text-muted-foreground">Order Number</p>
+                  <p className="font-semibold">{selectedOrder.request_data.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Currency</p>
+                  <p className="font-semibold">{selectedOrder.request_data.currency}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Sale Source</p>
+                  <p className="font-semibold">
+                    {selectedOrder.request_data.source_name || 
+                     (selectedOrder.request_data.client_details?.user_agent?.includes('POS') ? 'POS' : 'Online')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Shipping Cost</p>
+                  <p className="font-semibold">
+                    {selectedOrder.request_data.current_shipping_price_set?.shop_money?.amount 
+                      ? `$${parseFloat(selectedOrder.request_data.current_shipping_price_set.shop_money.amount).toFixed(2)}`
+                      : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Shipping Type</p>
+                  <p className="font-semibold">
+                    {selectedOrder.request_data.shipping_lines?.[0]?.title || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Staff Member</p>
+                  <p className="font-semibold text-xs">
+                    {selectedOrder.request_data.attributed_staffs?.[0]?.id 
+                      ? `Staff #${selectedOrder.request_data.attributed_staffs[0].id.split('/').pop()}`
+                      : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Line Items Table */}
+              <div>
+                <h3 className="font-semibold mb-3">Products</h3>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product Title</TableHead>
+                        <TableHead>Vendor</TableHead>
+                        <TableHead className="text-center">Quantity</TableHead>
+                        <TableHead className="text-right">Retail Price</TableHead>
+                        <TableHead className="text-right">Final Price</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrder.request_data.line_items?.map((item: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{item.title}</TableCell>
+                          <TableCell>{item.vendor}</TableCell>
+                          <TableCell className="text-center">{item.quantity}</TableCell>
+                          <TableCell className="text-right">
+                            ${parseFloat(item.price).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            ${parseFloat(item.pre_tax_price || (item.price * item.quantity)).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Total Summary */}
+              <div className="flex justify-end">
+                <div className="space-y-1 min-w-[200px]">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal:</span>
+                    <span>${parseFloat(selectedOrder.request_data.current_subtotal_price || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Tax:</span>
+                    <span>${parseFloat(selectedOrder.request_data.current_total_tax || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Shipping:</span>
+                    <span>
+                      ${parseFloat(selectedOrder.request_data.current_shipping_price_set?.shop_money?.amount || 0).toFixed(2)}
+                    </span>
+                  </div>
+                  <Separator className="my-2" />
+                  <div className="flex justify-between font-bold">
+                    <span>Total:</span>
+                    <span>${parseFloat(selectedOrder.request_data.current_total_price || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
