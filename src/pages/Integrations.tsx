@@ -1,151 +1,255 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Copy, Check, ShoppingBag, CreditCard, Package, MessageSquare, Send, CheckCircle2, XCircle, AlertCircle, Clock, Activity, Zap } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
-export default function Integrations() {
-  const {
-    currentBrand
-  } = useBrandContext();
-  const [copied, setCopied] = useState(false);
-  const [messages, setMessages] = useState<Array<{
-    role: string;
-    content: string;
-  }>>([]);
-  const [input, setInput] = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [webhookLogs, setWebhookLogs] = useState<any[]>([]);
-  const [selectedLog, setSelectedLog] = useState<any>(null);
-  const [isTesting, setIsTesting] = useState(false);
-  const webhookUrl = currentBrand ? `https://ulkxtkopehmiszfdjuys.supabase.co/functions/v1/shopify-orders?brand_id=${currentBrand.id}` : '';
 
-  // Fetch webhook logs and subscribe to realtime updates
+type Message = { role: string; content: string };
+type WebhookLog = {
+  id: string;
+  brand_id: string;
+  integration_type: string;
+  event_type: string;
+  status: string;
+  request_data: any;
+  response_summary: string | null;
+  error_message: string | null;
+  shopify_order_id: string | null;
+  invoices_created: number | null;
+  accounts_created: number | null;
+  created_at: string;
+};
+
+export default function Integrations() {
+  const { currentBrand } = useBrandContext();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
+  const [webhookSecret, setWebhookSecret] = useState('');
+  const [shopDomain, setShopDomain] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(false);
+  const [lastSuccessfulWebhook, setLastSuccessfulWebhook] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const webhookUrl = currentBrand
+    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shopify-orders?brand_id=${currentBrand.id}`
+    : '';
+
   useEffect(() => {
     if (!currentBrand) return;
-    const fetchLogs = async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('webhook_logs').select('*').eq('brand_id', currentBrand.id).order('created_at', {
-        ascending: false
-      }).limit(50);
-      if (!error && data) {
-        setWebhookLogs(data);
+
+    const fetchData = async () => {
+      // Fetch webhook logs
+      const { data: logs, error: logsError } = await supabase
+        .from('webhook_logs')
+        .select('*')
+        .eq('brand_id', currentBrand.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (logsError) {
+        console.error('Error fetching webhook logs:', logsError);
+        toast.error('Failed to load webhook logs');
+      } else {
+        setWebhookLogs(logs || []);
+        
+        // Find last successful webhook
+        const lastSuccess = logs?.find(log => log.status === 'success');
+        setLastSuccessfulWebhook(lastSuccess ? new Date(lastSuccess.created_at).toLocaleString() : null);
+      }
+
+      // Fetch integration config
+      const { data: integration, error: integrationError } = await supabase
+        .from('brand_integrations')
+        .select('*')
+        .eq('brand_id', currentBrand.id)
+        .eq('integration_type', 'shopify')
+        .maybeSingle();
+
+      if (!integrationError && integration) {
+        setIsConfigured(integration.is_active && !!integration.webhook_secret);
+        setShopDomain(integration.shop_domain || '');
+        setWebhookSecret(''); // Don't show the actual secret
+      } else {
+        setIsConfigured(false);
+        setShopDomain('');
+        setWebhookSecret('');
       }
     };
-    fetchLogs();
+
+    fetchData();
 
     // Subscribe to realtime updates
-    const channel = supabase.channel('webhook-logs-changes').on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'webhook_logs',
-      filter: `brand_id=eq.${currentBrand.id}`
-    }, payload => {
-      if (payload.eventType === 'INSERT') {
-        setWebhookLogs(prev => [payload.new as any, ...prev].slice(0, 50));
-      }
-    }).subscribe();
+    const channel = supabase
+      .channel('webhook_logs_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'webhook_logs',
+          filter: `brand_id=eq.${currentBrand.id}`,
+        },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
     };
   }, [currentBrand]);
+
+  const handleSaveIntegration = async () => {
+    if (!currentBrand || !webhookSecret.trim()) {
+      toast.error('Please enter a webhook secret');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('brand_integrations')
+        .upsert({
+          brand_id: currentBrand.id,
+          integration_type: 'shopify',
+          webhook_secret: webhookSecret,
+          shop_domain: shopDomain || null,
+          is_active: true,
+        }, {
+          onConflict: 'brand_id,integration_type'
+        });
+
+      if (error) throw error;
+
+      toast.success('Shopify integration configured successfully');
+      setIsConfigured(true);
+      setWebhookSecret(''); // Clear the input for security
+    } catch (error) {
+      console.error('Error saving integration:', error);
+      toast.error('Failed to save integration configuration');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const copyToClipboard = async (text: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast.success('Copied to clipboard');
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Copied to clipboard');
+    } catch (err) {
+      toast.error('Failed to copy to clipboard');
+    }
   };
 
   const handleTestWebhook = async () => {
-    if (!currentBrand) return;
-    
-    setIsTesting(true);
+    if (!currentBrand) {
+      toast.error('Please select a brand first');
+      return;
+    }
+
+    if (!isConfigured) {
+      toast.error('Please configure your Shopify integration first');
+      return;
+    }
+
     try {
-      const { error } = await supabase.functions.invoke('test-shopify-webhook', {
+      toast.info('Sending test webhook...');
+      
+      const { data, error } = await supabase.functions.invoke('test-shopify-webhook', {
         body: { brand_id: currentBrand.id }
       });
 
       if (error) throw error;
-      
-      toast.success('Test webhook sent! Check the Activity Log for results.');
+
+      if (data.success) {
+        toast.success('Test webhook sent successfully! Check the Activity Log below.');
+      } else {
+        toast.error(data.error || 'Test webhook failed');
+      }
     } catch (error) {
-      console.error('Test webhook error:', error);
+      console.error('Error sending test webhook:', error);
       toast.error('Failed to send test webhook');
-    } finally {
-      setIsTesting(false);
     }
   };
+
   const sendMessage = async () => {
-    if (!input.trim() || isStreaming) return;
-    const userMessage = {
-      role: 'user',
-      content: input
-    };
-    setMessages(prev => [...prev, userMessage]);
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = { role: 'user', content: input };
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
-    setIsStreaming(true);
+    setIsLoading(true);
+
     let assistantContent = '';
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/integration-assistant`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`
-        },
-        body: JSON.stringify({
-          messages: [...messages, userMessage]
-        })
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/integration-assistant`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            messages: [...messages, userMessage],
+          }),
+        }
+      );
+
       if (!response.ok || !response.body) {
         throw new Error('Failed to get response');
       }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: ''
-      }]);
+
+      setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
+
       while (true) {
-        const {
-          done,
-          value
-        } = await reader.read();
+        const { done, value } = await reader.read();
         if (done) break;
-        buffer += decoder.decode(value, {
-          stream: true
-        });
+
+        buffer += decoder.decode(value, { stream: true });
         let newlineIndex: number;
+
         while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
           let line = buffer.slice(0, newlineIndex);
           buffer = buffer.slice(newlineIndex + 1);
+
           if (line.endsWith('\r')) line = line.slice(0, -1);
           if (line.startsWith(':') || line.trim() === '') continue;
           if (!line.startsWith('data: ')) continue;
+
           const jsonStr = line.slice(6).trim();
           if (jsonStr === '[DONE]') break;
+
           try {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content;
             if (content) {
               assistantContent += content;
-              setMessages(prev => {
+              setMessages((prev) => {
                 const newMessages = [...prev];
                 newMessages[newMessages.length - 1] = {
                   role: 'assistant',
-                  content: assistantContent
+                  content: assistantContent,
                 };
                 return newMessages;
               });
@@ -159,11 +263,12 @@ export default function Integrations() {
     } catch (error) {
       console.error('Error:', error);
       toast.error('Failed to get response from assistant');
-      setMessages(prev => prev.slice(0, -1));
+      setMessages((prev) => prev.slice(0, -1));
     } finally {
-      setIsStreaming(false);
+      setIsLoading(false);
     }
   };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
@@ -176,6 +281,7 @@ export default function Integrations() {
         return <Clock className="h-4 w-4 text-gray-500" />;
     }
   };
+
   const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'success':
@@ -188,26 +294,23 @@ export default function Integrations() {
         return 'outline';
     }
   };
-  const successCount = webhookLogs.filter(log => log.status === 'success').length;
-  const errorCount = webhookLogs.filter(log => log.status === 'error').length;
-  const totalInvoices = webhookLogs.reduce((sum, log) => sum + (log.invoices_created || 0), 0);
-  
-  // Check for recent webhook failures
-  const recentLogs = webhookLogs.slice(0, 10);
-  const recentErrors = recentLogs.filter(log => log.status === 'error');
-  const hasRecentErrors = recentErrors.length > 0;
-  const hasMissingBrandId = recentErrors.some(log => 
-    log.error_message?.includes('Missing brand_id')
-  );
+
   if (!currentBrand) {
-    return <div className="flex items-center justify-center h-full">
+    return (
+      <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground">Please select a brand to view integrations</p>
-      </div>;
+      </div>
+    );
   }
-  return <div className="space-y-6">
+
+  const successCount = webhookLogs.filter((log) => log.status === 'success').length;
+  const errorCount = webhookLogs.filter((log) => log.status === 'error').length;
+  const totalInvoices = webhookLogs.reduce((sum, log) => sum + (log.invoices_created || 0), 0);
+
+  return (
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
-        
       </div>
 
       <Tabs defaultValue="shopify" className="space-y-6">
@@ -230,342 +333,362 @@ export default function Integrations() {
           </TabsTrigger>
         </TabsList>
 
+        {/* Shopify Tab */}
         <TabsContent value="shopify" className="space-y-6">
-          {hasRecentErrors && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="space-y-2">
-                  <p className="font-semibold">Webhook Integration Issues Detected</p>
-                  {hasMissingBrandId && (
-                    <p className="text-sm">
-                      Your Shopify webhook URL is missing the brand_id parameter. Make sure you're using the complete URL shown below (including ?brand_id=...) when configuring your webhook in Shopify.
-                    </p>
-                  )}
-                  <p className="text-sm">
-                    Check the Activity Log tab for detailed error messages.
-                  </p>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Shopify Integration</CardTitle>
-                  <CardDescription>
-                    Connect your Shopify store to automatically sync orders and create invoices
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <Alert>
-                    <CheckCircle2 className="h-4 w-4" />
-                    <AlertDescription>
-                      <div className="space-y-2">
-                        <p className="font-semibold">Webhook Secret Configured</p>
-                        <p className="text-sm">
-                          The webhook secret (SHOPIFY_WEBHOOK_SECRET) is already configured globally for your project. This is used to verify all incoming webhooks from Shopify.
-                        </p>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-
-                  <Alert>
-                    <AlertDescription>
-                      This integration will automatically:
-                      <ul className="list-disc list-inside mt-2 space-y-1">
-                        <li>Create invoices when products sell</li>
-                        <li>Match product vendors to your accounts</li>
-                        <li>Create new accounts for unrecognized vendors</li>
-                        <li>Track sales and update P&L in real-time</li>
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="webhook-url">Your Webhook URL (Copy This Exact URL)</Label>
-                      <div className="flex gap-2">
-                        <Input id="webhook-url" value={webhookUrl} readOnly className="font-mono text-sm" />
-                        <Button variant="outline" size="icon" onClick={() => copyToClipboard(webhookUrl)}>
-                          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        ⚠️ Important: Use this COMPLETE URL including the ?brand_id= parameter
-                      </p>
-                    </div>
-
-                    <Separator />
-
-                    <div className="space-y-2">
-                      <Button onClick={handleTestWebhook} disabled={isTesting} variant="outline" className="w-full">
-                        <Zap className="h-4 w-4 mr-2" />
-                        {isTesting ? 'Sending Test...' : 'Send Test Webhook'}
-                      </Button>
-                      <p className="text-sm text-muted-foreground text-center">
-                        Simulate a Shopify order to verify your integration is working
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Setup Instructions</CardTitle>
-                  <CardDescription>Follow these steps to connect your Shopify store</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex gap-3">
-                      <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center shrink-0">
-                        1
-                      </Badge>
-                      <div>
-                        <p className="font-medium">Access Shopify Webhooks</p>
-                        <p className="text-sm text-muted-foreground">
-                          In Shopify Admin, go to <strong>Settings → Notifications</strong>, scroll down to the <strong>Webhooks</strong> section
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center shrink-0">
-                        2
-                      </Badge>
-                      <div>
-                        <p className="font-medium">Create Order Webhook</p>
-                        <p className="text-sm text-muted-foreground">
-                          Click "Create webhook" → Select Event: <strong>Order creation</strong> → Format: <strong>JSON</strong>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center shrink-0">
-                        3
-                      </Badge>
-                      <div>
-                        <p className="font-medium">Paste Complete Webhook URL</p>
-                        <p className="text-sm text-muted-foreground">
-                          Copy the URL shown above and paste it into the "URL" field in Shopify. <strong>Must include ?brand_id= parameter!</strong>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center shrink-0">
-                        4
-                      </Badge>
-                      <div>
-                        <p className="font-medium">Get Your API Secret Key</p>
-                        <p className="text-sm text-muted-foreground">
-                          In Shopify Admin: <strong>Settings → Apps and sales channels → Develop apps → [Your App] → API credentials</strong>. Copy the "API secret key" (also called Client Secret)
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center shrink-0">
-                        5
-                      </Badge>
-                      <div>
-                        <p className="font-medium">Update Webhook Secret (If Needed)</p>
-                        <p className="text-sm text-muted-foreground">
-                          If you need to update the SHOPIFY_WEBHOOK_SECRET, contact your administrator
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center shrink-0">
-                        6
-                      </Badge>
-                      <div>
-                        <p className="font-medium">Test Integration</p>
-                        <p className="text-sm text-muted-foreground">
-                          Click "Send Test Webhook" above or place a test order in Shopify to verify
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="lg:col-span-1">
-              <Card className="h-full">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    Integration Assistant
-                  </CardTitle>
-                  
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ScrollArea className="h-[400px] pr-4">
-                    <div className="space-y-4">
-                      {messages.length === 0 && <div className="text-center text-muted-foreground py-8">
-                          <p>Ask me anything about setting up integrations!</p>
-                        </div>}
-                      {messages.map((msg, idx) => <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[80%] rounded-lg p-3 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                          </div>
-                        </div>)}
-                    </div>
-                  </ScrollArea>
-
-                  <div className="space-y-2">
-                    <Textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      sendMessage();
-                    }
-                  }} placeholder="Ask about Shopify integration..." className="min-h-[80px]" disabled={isStreaming} />
-                    <Button onClick={sendMessage} disabled={isStreaming || !input.trim()} className="w-full">
-                      <Send className="h-4 w-4 mr-2" />
-                      {isStreaming ? 'Sending...' : 'Send'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="activity" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Webhook Activity Log</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Shopify Integration
+              </CardTitle>
               <CardDescription>
-                Real-time monitoring of all webhook events and integration activity
+                Connect your Shopify store to automatically create invoices from orders
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-4 gap-4">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-2xl font-bold">{webhookLogs.length}</div>
-                    <p className="text-xs text-muted-foreground">Total Events</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-green-500">{successCount}</div>
-                    <p className="text-xs text-muted-foreground">Successful</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-red-500">{errorCount}</div>
-                    <p className="text-xs text-muted-foreground">Errors</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-2xl font-bold">{totalInvoices}</div>
-                    <p className="text-xs text-muted-foreground">Invoices Created</p>
-                  </CardContent>
-                </Card>
+              {/* Connection Status */}
+              <div className={`flex items-center gap-2 p-4 rounded-lg ${
+                isConfigured ? 'bg-green-50 dark:bg-green-950' : 'bg-amber-50 dark:bg-amber-950'
+              }`}>
+                <div className={`h-2 w-2 rounded-full ${
+                  isConfigured ? 'bg-green-500 animate-pulse' : 'bg-amber-500'
+                }`} />
+                <div className="flex-1">
+                  <span className="text-sm font-medium">
+                    {isConfigured ? 'Integration Active' : 'Not Configured'}
+                  </span>
+                  {lastSuccessfulWebhook && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Last successful order: {lastSuccessfulWebhook}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-2">
-                {webhookLogs.length === 0 ? <div className="text-center py-8 text-muted-foreground">
-                    <p>No webhook events yet</p>
-                    <p className="text-sm">Events will appear here when webhooks are triggered</p>
-                  </div> : <ScrollArea className="h-[500px]">
-                    <div className="space-y-2 pr-4">
-                      {webhookLogs.map(log => <Card key={log.id} className="cursor-pointer hover:bg-accent transition-colors" onClick={() => setSelectedLog(selectedLog?.id === log.id ? null : log)}>
-                          <CardContent className="p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start gap-3 flex-1">
-                                {getStatusIcon(log.status)}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                    <Badge variant={getStatusBadgeVariant(log.status)}>
-                                      {log.status}
-                                    </Badge>
-                                    <span className="text-sm font-medium">{log.integration_type}</span>
-                                    <span className="text-sm text-muted-foreground">•</span>
-                                    <span className="text-sm text-muted-foreground">{log.event_type}</span>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground truncate">
-                                    {log.response_summary || log.error_message || 'Processing...'}
-                                  </p>
-                                  {log.shopify_order_id && <p className="text-xs text-muted-foreground mt-1">
-                                      Order: {log.shopify_order_id}
-                                    </p>}
-                                </div>
-                              </div>
-                              <div className="text-right ml-4">
-                                <p className="text-xs text-muted-foreground whitespace-nowrap">
-                                  {format(new Date(log.created_at), 'MMM d, h:mm a')}
-                                </p>
-                                {(log.invoices_created > 0 || log.accounts_created > 0) && <div className="flex gap-2 mt-1 justify-end">
-                                    {log.invoices_created > 0 && <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                        {log.invoices_created} invoice{log.invoices_created !== 1 ? 's' : ''}
-                                      </span>}
-                                    {log.accounts_created > 0 && <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                        {log.accounts_created} new
-                                      </span>}
-                                  </div>}
-                              </div>
-                            </div>
+              {/* Configuration Form */}
+              <div className="space-y-4 p-4 border rounded-lg">
+                <h3 className="font-semibold text-sm">Integration Settings</h3>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Webhook Signing Secret *</label>
+                  <Input
+                    type="password"
+                    placeholder="Enter your Shopify webhook signing secret"
+                    value={webhookSecret}
+                    onChange={(e) => setWebhookSecret(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Found in Shopify Admin → Settings → Notifications → Webhooks (at the bottom)
+                  </p>
+                </div>
 
-                            {selectedLog?.id === log.id && <div className="mt-4 pt-4 border-t space-y-2">
-                                {log.error_message && <div>
-                                    <p className="text-sm font-medium mb-1">Error:</p>
-                                    <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950 p-2 rounded">
-                                      {log.error_message}
-                                    </p>
-                                  </div>}
-                                {log.request_data && <div>
-                                    <p className="text-sm font-medium mb-1">Request Data:</p>
-                                    <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-                                      {JSON.stringify(log.request_data, null, 2)}
-                                    </pre>
-                                  </div>}
-                              </div>}
-                          </CardContent>
-                        </Card>)}
-                    </div>
-                  </ScrollArea>}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Shop Domain (Optional)</label>
+                  <Input
+                    placeholder="your-store.myshopify.com"
+                    value={shopDomain}
+                    onChange={(e) => setShopDomain(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Your Shopify store URL for reference
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={handleSaveIntegration}
+                  disabled={isSaving || !webhookSecret.trim()}
+                  className="w-full"
+                >
+                  {isSaving ? 'Saving...' : isConfigured ? 'Update Integration' : 'Save Integration'}
+                </Button>
+              </div>
+
+              {/* Setup Instructions */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Setup Instructions</h3>
+                <ol className="list-decimal list-inside space-y-3 text-sm text-muted-foreground">
+                  <li>
+                    <strong className="text-foreground">Go to Shopify Admin:</strong>
+                    <ul className="list-disc list-inside ml-6 mt-1">
+                      <li>Settings → Notifications → Webhooks section</li>
+                    </ul>
+                  </li>
+                  <li>
+                    <strong className="text-foreground">Create Webhook:</strong>
+                    <ul className="list-disc list-inside ml-6 mt-1 space-y-1">
+                      <li>Click "Create webhook"</li>
+                      <li>Event: <code className="bg-muted px-1 py-0.5 rounded">Order creation</code></li>
+                      <li>Format: <code className="bg-muted px-1 py-0.5 rounded">JSON</code></li>
+                      <li>URL: Copy from the "Webhook URL" field below</li>
+                    </ul>
+                  </li>
+                  <li>
+                    <strong className="text-foreground">Copy Webhook Signing Secret:</strong>
+                    <ul className="list-disc list-inside ml-6 mt-1">
+                      <li>After creating webhook, find the signing secret at bottom of webhooks page</li>
+                      <li>Paste it in the "Webhook Signing Secret" field above</li>
+                    </ul>
+                  </li>
+                  <li>
+                    <strong className="text-foreground">Save & Test:</strong>
+                    <ul className="list-disc list-inside ml-6 mt-1">
+                      <li>Click "Save Integration" above</li>
+                      <li>Use "Send Test Webhook" button to verify</li>
+                      <li>Check Activity Log for results</li>
+                    </ul>
+                  </li>
+                </ol>
+              </div>
+
+              {/* Webhook URL */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Webhook URL</label>
+                <div className="flex gap-2">
+                  <Input
+                    value={webhookUrl}
+                    readOnly
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(webhookUrl)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Copy this URL and paste it in Shopify webhook settings
+                </p>
+              </div>
+
+              {/* Test Webhook */}
+              <div className="pt-4 border-t">
+                <Button
+                  onClick={handleTestWebhook}
+                  variant="outline"
+                  className="w-full"
+                  disabled={!isConfigured}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Test Webhook
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  {isConfigured 
+                    ? 'Simulates a Shopify order to test your integration' 
+                    : 'Configure integration first to test'}
+                </p>
+              </div>
+
+              {/* Integration Assistant */}
+              <div className="pt-4 border-t">
+                <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Integration Assistant
+                </h3>
+                <ScrollArea className="h-[300px] border rounded-lg p-4">
+                  <div className="space-y-4">
+                    {messages.length === 0 && (
+                      <div className="text-center text-muted-foreground py-8">
+                        <p>Ask me anything about setting up Shopify integration!</p>
+                      </div>
+                    )}
+                    {messages.map((msg, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-lg p-3 ${
+                            msg.role === 'user'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </ScrollArea>
+                <div className="flex gap-2 mt-4">
+                  <Textarea
+                    placeholder="Ask about Shopify integration..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                    className="min-h-[60px]"
+                  />
+                  <Button onClick={sendMessage} disabled={isLoading || !input.trim()}>
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* Activity Log Tab */}
+        <TabsContent value="activity" className="space-y-6">
+          {/* Warning Banner for Errors */}
+          {webhookLogs.some(log => log.status === 'error' && log.error_message?.includes('brand_id')) && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Webhook Configuration Issue Detected</AlertTitle>
+              <AlertDescription>
+                Recent webhooks are failing because the webhook URL is missing the brand_id parameter. 
+                Make sure you're using the complete webhook URL from the Shopify tab, including the brand_id query parameter.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Webhook Activity Log</CardTitle>
+              <CardDescription>
+                Monitor incoming webhooks and their processing status
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold">{webhookLogs.length}</p>
+                      <p className="text-sm text-muted-foreground">Total Events</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-green-600">{successCount}</p>
+                      <p className="text-sm text-muted-foreground">Successful</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-red-600">{errorCount}</p>
+                      <p className="text-sm text-muted-foreground">Errors</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Webhook Logs */}
+              <div className="space-y-2">
+                {webhookLogs.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No webhook events yet</p>
+                  </div>
+                ) : (
+                  webhookLogs.map((log) => (
+                    <Collapsible key={log.id}>
+                      <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
+                        <div className="flex items-center gap-3 flex-1">
+                          {getStatusIcon(log.status)}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm">
+                                {log.event_type} #{log.shopify_order_id}
+                              </p>
+                              <Badge variant={getStatusBadgeVariant(log.status)}>
+                                {log.status}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {format(new Date(log.created_at), 'PPpp')}
+                            </p>
+                            {log.response_summary && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {log.response_summary}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            View Details
+                          </Button>
+                        </CollapsibleTrigger>
+                      </div>
+                      <CollapsibleContent>
+                        <div className="p-4 bg-muted/50 border-x border-b rounded-b-lg space-y-4">
+                          {log.error_message && (
+                            <div>
+                              <p className="text-sm font-medium text-red-600">Error:</p>
+                              <p className="text-xs font-mono bg-red-50 dark:bg-red-950 p-2 rounded mt-1">
+                                {log.error_message}
+                              </p>
+                            </div>
+                          )}
+                          {log.request_data && (
+                            <div>
+                              <p className="text-sm font-medium">Request Data:</p>
+                              <pre className="text-xs font-mono bg-background p-2 rounded mt-1 overflow-auto max-h-40">
+                                {JSON.stringify(log.request_data, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-4 text-xs">
+                            <div>
+                              <span className="text-muted-foreground">Invoices Created:</span>
+                              <span className="ml-2 font-medium">{log.invoices_created || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Accounts Created:</span>
+                              <span className="ml-2 font-medium">{log.accounts_created || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Square Tab (Coming Soon) */}
         <TabsContent value="square">
           <Card>
             <CardHeader>
               <CardTitle>Square Integration</CardTitle>
-              <CardDescription>Coming soon</CardDescription>
+              <CardDescription>Coming Soon</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                Square integration will allow you to sync payments and transactions automatically.
+                Square integration will be available in a future update.
               </p>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* BrandBoom Tab (Coming Soon) */}
         <TabsContent value="brandboom">
           <Card>
             <CardHeader>
               <CardTitle>BrandBoom Integration</CardTitle>
-              <CardDescription>Coming soon</CardDescription>
+              <CardDescription>Coming Soon</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                BrandBoom integration will sync your orders and inventory data.
+                BrandBoom integration will be available in a future update.
               </p>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-    </div>;
+    </div>
+  );
 }

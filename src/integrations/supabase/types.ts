@@ -257,6 +257,47 @@ export type Database = {
           },
         ]
       }
+      brand_integrations: {
+        Row: {
+          brand_id: string
+          created_at: string
+          id: string
+          integration_type: string
+          is_active: boolean
+          shop_domain: string | null
+          updated_at: string
+          webhook_secret: string | null
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          id?: string
+          integration_type: string
+          is_active?: boolean
+          shop_domain?: string | null
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          id?: string
+          integration_type?: string
+          is_active?: boolean
+          shop_domain?: string | null
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_integrations_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brandboom_order_items: {
         Row: {
           color: string | null

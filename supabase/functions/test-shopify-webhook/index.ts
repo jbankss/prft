@@ -36,6 +36,21 @@ Deno.serve(async (req) => {
 
     console.log(`Sending test webhook for brand: ${brand.name}`);
 
+    // Get webhook secret from database
+    const { data: integration, error: integrationError } = await supabase
+      .from('brand_integrations')
+      .select('webhook_secret')
+      .eq('brand_id', brand_id)
+      .eq('integration_type', 'shopify')
+      .eq('is_active', true)
+      .single();
+
+    if (integrationError || !integration?.webhook_secret) {
+      throw new Error('Shopify integration not configured for this brand. Please configure it first in the Shopify tab.');
+    }
+
+    const secret = integration.webhook_secret;
+
     // Create a mock Shopify order payload
     const testOrderPayload = {
       id: Math.floor(Math.random() * 1000000000),
@@ -59,7 +74,8 @@ Deno.serve(async (req) => {
           quantity: 2,
           price: "25.00",
           vendor: "Test Vendor A",
-          sku: "TEST-SKU-001"
+          sku: "TEST-SKU-001",
+          name: "Test Product 1"
         },
         {
           id: Math.floor(Math.random() * 1000000000),
@@ -68,17 +84,13 @@ Deno.serve(async (req) => {
           quantity: 1,
           price: "50.00",
           vendor: "Test Vendor B",
-          sku: "TEST-SKU-002"
+          sku: "TEST-SKU-002",
+          name: "Test Product 2"
         }
       ]
     };
 
-    // Calculate HMAC signature for the test webhook
-    const secret = Deno.env.get('SHOPIFY_WEBHOOK_SECRET');
-    if (!secret) {
-      throw new Error('SHOPIFY_WEBHOOK_SECRET not configured');
-    }
-
+    // Calculate HMAC signature
     const encoder = new TextEncoder();
     const data = encoder.encode(JSON.stringify(testOrderPayload));
     const keyData = encoder.encode(secret);
