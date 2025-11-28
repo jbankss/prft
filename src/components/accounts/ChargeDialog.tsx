@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { logActivity } from '@/lib/activityLogger';
 
 export function ChargeDialog({
   open,
@@ -34,14 +35,22 @@ export function ChargeDialog({
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('charges').insert({
+      const { data: newCharge, error } = await supabase.from('charges').insert({
         account_id: accountId,
         ...formData,
         amount: parseFloat(formData.amount),
         created_by: user.id,
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Log the activity
+      await logActivity({
+        action: 'created',
+        entityType: 'charge',
+        entityId: newCharge.id,
+        changes: { description: formData.description, amount: formData.amount, charge_date: formData.charge_date }
+      });
 
       toast.success('Charge created successfully');
       setFormData({

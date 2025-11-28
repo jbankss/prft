@@ -1,8 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useBrandContext } from '@/hooks/useBrandContext';
-import { Building2 } from 'lucide-react';
+import { Building2, Activity, DollarSign, CreditCard, Calendar, BarChart3 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-export function AccountsSidebar() {
+interface AccountsSidebarProps {
+  activeView: string;
+  onViewChange: (view: string) => void;
+}
+
+export function AccountsSidebar({ activeView, onViewChange }: AccountsSidebarProps) {
   const { currentBrand } = useBrandContext();
 
   if (!currentBrand) {
@@ -12,6 +19,14 @@ export function AccountsSidebar() {
       </div>
     );
   }
+
+  const views = [
+    { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'activity', label: 'Activity Timeline', icon: Activity },
+    { id: 'balances', label: 'Balances', icon: DollarSign },
+    { id: 'payments', label: 'Payments', icon: CreditCard },
+    { id: 'calendar', label: 'Calendar View', icon: Calendar },
+  ];
 
   return (
     <div className="w-80 border-r border-border/40 bg-background/50 backdrop-blur-sm p-6 space-y-6">
@@ -48,12 +63,37 @@ export function AccountsSidebar() {
 
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          Views
+        </h3>
+        <div className="space-y-1">
+          {views.map((view) => {
+            const Icon = view.icon;
+            return (
+              <Button
+                key={view.id}
+                variant={activeView === view.id ? 'secondary' : 'ghost'}
+                className={cn(
+                  'w-full justify-start gap-3',
+                  activeView === view.id && 'bg-primary/10 text-primary hover:bg-primary/20'
+                )}
+                onClick={() => onViewChange(view.id)}
+              >
+                <Icon className="h-4 w-4" />
+                {view.label}
+              </Button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Quick Stats
         </h3>
         <div className="space-y-1">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Contact</span>
-            <span className="font-medium">{currentBrand.contact_email || 'N/A'}</span>
+            <span className="font-medium truncate ml-2">{currentBrand.contact_email || 'N/A'}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Phone</span>
