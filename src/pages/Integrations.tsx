@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Copy, Check, ShoppingBag, CreditCard, Package, MessageSquare, Send, CheckCircle2, XCircle, AlertCircle, Clock, Activity } from 'lucide-react';
+import { Copy, Check, ShoppingBag, CreditCard, Package, MessageSquare, Send, CheckCircle2, XCircle, AlertCircle, Clock, Activity, Zap } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
@@ -18,8 +18,6 @@ export default function Integrations() {
   const {
     currentBrand
   } = useBrandContext();
-  const [webhookSecret, setWebhookSecret] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [messages, setMessages] = useState<Array<{
     role: string;
@@ -29,6 +27,7 @@ export default function Integrations() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [webhookLogs, setWebhookLogs] = useState<any[]>([]);
   const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [isTesting, setIsTesting] = useState(false);
   const webhookUrl = currentBrand ? `https://ulkxtkopehmiszfdjuys.supabase.co/functions/v1/shopify-orders?brand_id=${currentBrand.id}` : '';
 
   // Fetch webhook logs and subscribe to realtime updates
@@ -68,19 +67,24 @@ export default function Integrations() {
     toast.success('Copied to clipboard');
     setTimeout(() => setCopied(false), 2000);
   };
-  const handleSaveWebhook = async () => {
-    if (!webhookSecret.trim()) {
-      toast.error('Please enter a webhook secret');
-      return;
-    }
-    setIsSaving(true);
+
+  const handleTestWebhook = async () => {
+    if (!currentBrand) return;
+    
+    setIsTesting(true);
     try {
-      toast.success('Webhook secret saved successfully');
-      setWebhookSecret('');
+      const { error } = await supabase.functions.invoke('test-shopify-webhook', {
+        body: { brand_id: currentBrand.id }
+      });
+
+      if (error) throw error;
+      
+      toast.success('Test webhook sent! Check the Activity Log for results.');
     } catch (error) {
-      toast.error('Failed to save webhook secret');
+      console.error('Test webhook error:', error);
+      toast.error('Failed to send test webhook');
     } finally {
-      setIsSaving(false);
+      setIsTesting(false);
     }
   };
   const sendMessage = async () => {
@@ -187,6 +191,14 @@ export default function Integrations() {
   const successCount = webhookLogs.filter(log => log.status === 'success').length;
   const errorCount = webhookLogs.filter(log => log.status === 'error').length;
   const totalInvoices = webhookLogs.reduce((sum, log) => sum + (log.invoices_created || 0), 0);
+  
+  // Check for recent webhook failures
+  const recentLogs = webhookLogs.slice(0, 10);
+  const recentErrors = recentLogs.filter(log => log.status === 'error');
+  const hasRecentErrors = recentErrors.length > 0;
+  const hasMissingBrandId = recentErrors.some(log => 
+    log.error_message?.includes('Missing brand_id')
+  );
   if (!currentBrand) {
     return <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground">Please select a brand to view integrations</p>
@@ -219,14 +231,47 @@ export default function Integrations() {
         </TabsList>
 
         <TabsContent value="shopify" className="space-y-6">
+          {hasRecentErrors && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p className="font-semibold">Webhook Integration Issues Detected</p>
+                  {hasMissingBrandId && (
+                    <p className="text-sm">
+                      Your Shopify webhook URL is missing the brand_id parameter. Make sure you're using the complete URL shown below (including ?brand_id=...) when configuring your webhook in Shopify.
+                    </p>
+                  )}
+                  <p className="text-sm">
+                    Check the Activity Log tab for detailed error messages.
+                  </p>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Shopify Integration</CardTitle>
-                  
+                  <CardDescription>
+                    Connect your Shopify store to automatically sync orders and create invoices
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  <Alert>
+                    <CheckCircle2 className="h-4 w-4" />
+                    <AlertDescription>
+                      <div className="space-y-2">
+                        <p className="font-semibold">Webhook Secret Configured</p>
+                        <p className="text-sm">
+                          The webhook secret (SHOPIFY_WEBHOOK_SECRET) is already configured globally for your project. This is used to verify all incoming webhooks from Shopify.
+                        </p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+
                   <Alert>
                     <AlertDescription>
                       This integration will automatically:
@@ -241,7 +286,7 @@ export default function Integrations() {
 
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="webhook-url">Your Webhook URL</Label>
+                      <Label htmlFor="webhook-url">Your Webhook URL (Copy This Exact URL)</Label>
                       <div className="flex gap-2">
                         <Input id="webhook-url" value={webhookUrl} readOnly className="font-mono text-sm" />
                         <Button variant="outline" size="icon" onClick={() => copyToClipboard(webhookUrl)}>
@@ -249,23 +294,21 @@ export default function Integrations() {
                         </Button>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Use this URL when setting up your Shopify webhook
+                        ⚠️ Important: Use this COMPLETE URL including the ?brand_id= parameter
                       </p>
                     </div>
 
                     <Separator />
 
                     <div className="space-y-2">
-                      <Label htmlFor="webhook-secret">Webhook Secret</Label>
-                      <Input id="webhook-secret" type="password" value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)} placeholder="Enter your Shopify webhook secret" />
-                      <p className="text-sm text-muted-foreground">
-                        Get this from Shopify Admin → Settings → Notifications → Webhooks
+                      <Button onClick={handleTestWebhook} disabled={isTesting} variant="outline" className="w-full">
+                        <Zap className="h-4 w-4 mr-2" />
+                        {isTesting ? 'Sending Test...' : 'Send Test Webhook'}
+                      </Button>
+                      <p className="text-sm text-muted-foreground text-center">
+                        Simulate a Shopify order to verify your integration is working
                       </p>
                     </div>
-
-                    <Button onClick={handleSaveWebhook} disabled={isSaving}>
-                      {isSaving ? 'Saving...' : 'Save Webhook Secret'}
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -273,6 +316,7 @@ export default function Integrations() {
               <Card>
                 <CardHeader>
                   <CardTitle>Setup Instructions</CardTitle>
+                  <CardDescription>Follow these steps to connect your Shopify store</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
@@ -281,9 +325,9 @@ export default function Integrations() {
                         1
                       </Badge>
                       <div>
-                        <p className="font-medium">Log into Shopify Admin</p>
+                        <p className="font-medium">Access Shopify Webhooks</p>
                         <p className="text-sm text-muted-foreground">
-                          Go to Settings → Notifications → Webhooks
+                          In Shopify Admin, go to <strong>Settings → Notifications</strong>, scroll down to the <strong>Webhooks</strong> section
                         </p>
                       </div>
                     </div>
@@ -293,9 +337,9 @@ export default function Integrations() {
                         2
                       </Badge>
                       <div>
-                        <p className="font-medium">Create New Webhook</p>
+                        <p className="font-medium">Create Order Webhook</p>
                         <p className="text-sm text-muted-foreground">
-                          Event: "Order creation" | Format: JSON
+                          Click "Create webhook" → Select Event: <strong>Order creation</strong> → Format: <strong>JSON</strong>
                         </p>
                       </div>
                     </div>
@@ -305,9 +349,9 @@ export default function Integrations() {
                         3
                       </Badge>
                       <div>
-                        <p className="font-medium">Copy Your Webhook URL</p>
+                        <p className="font-medium">Paste Complete Webhook URL</p>
                         <p className="text-sm text-muted-foreground">
-                          Use the URL shown above in the webhook configuration
+                          Copy the URL shown above and paste it into the "URL" field in Shopify. <strong>Must include ?brand_id= parameter!</strong>
                         </p>
                       </div>
                     </div>
@@ -317,9 +361,9 @@ export default function Integrations() {
                         4
                       </Badge>
                       <div>
-                        <p className="font-medium">Save and Get Secret</p>
+                        <p className="font-medium">Get Your API Secret Key</p>
                         <p className="text-sm text-muted-foreground">
-                          After saving, copy the webhook secret and paste it above
+                          In Shopify Admin: <strong>Settings → Apps and sales channels → Develop apps → [Your App] → API credentials</strong>. Copy the "API secret key" (also called Client Secret)
                         </p>
                       </div>
                     </div>
@@ -329,9 +373,21 @@ export default function Integrations() {
                         5
                       </Badge>
                       <div>
-                        <p className="font-medium">Test Your Integration</p>
+                        <p className="font-medium">Update Webhook Secret (If Needed)</p>
                         <p className="text-sm text-muted-foreground">
-                          Place a test order to verify invoices are created automatically
+                          If you need to update the SHOPIFY_WEBHOOK_SECRET, contact your administrator
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <Badge variant="outline" className="h-6 w-6 rounded-full p-0 flex items-center justify-center shrink-0">
+                        6
+                      </Badge>
+                      <div>
+                        <p className="font-medium">Test Integration</p>
+                        <p className="text-sm text-muted-foreground">
+                          Click "Send Test Webhook" above or place a test order in Shopify to verify
                         </p>
                       </div>
                     </div>
