@@ -9,24 +9,23 @@ import { AccountsSidebar } from '@/components/accounts/AccountsSidebar';
 import { AccountsWidgets } from '@/components/accounts/AccountsWidgets';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { toast } from 'sonner';
-
 export default function Accounts() {
-  const { currentBrand } = useBrandContext();
+  const {
+    currentBrand
+  } = useBrandContext();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAccountDialog, setShowAccountDialog] = useState(false);
-
   const fetchData = async () => {
     if (!currentBrand?.id) return;
-    
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('accounts')
-        .select('*, brands(*), charges(*), invoices(*)')
-        .eq('brand_id', currentBrand.id)
-        .order('created_at', { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.from('accounts').select('*, brands(*), charges(*), invoices(*)').eq('brand_id', currentBrand.id).order('created_at', {
+        ascending: false
+      });
       if (error) throw error;
       setAccounts(data || []);
     } catch (error: any) {
@@ -35,40 +34,30 @@ export default function Accounts() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchData();
-
-    const accountsChannel = supabase
-      .channel('accounts-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchData)
-      .subscribe();
-
+    const accountsChannel = supabase.channel('accounts-changes').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'accounts'
+    }, fetchData).subscribe();
     return () => {
       supabase.removeChannel(accountsChannel);
     };
   }, [currentBrand?.id]);
-
   if (!currentBrand) {
-    return (
-      <div className="flex items-center justify-center h-96">
+    return <div className="flex items-center justify-center h-96">
         <div className="text-center space-y-4">
           <p className="text-muted-foreground">Select a brand from the top-right to view Brand Headquarters</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
+    return <div className="flex items-center justify-center h-96">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="h-full flex flex-col">
+  return <div className="h-full flex flex-col">
       {/* Animated Header */}
       <div className="relative overflow-hidden border-b border-border/40 bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 animate-gradient">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent animate-shimmer" />
@@ -79,9 +68,7 @@ export default function Accounts() {
               Brand Headquarters
             </h1>
           </div>
-          <p className="text-muted-foreground ml-11">
-            Track performance, manage accounts, and analyze P&L for {currentBrand.name}
-          </p>
+          
         </div>
       </div>
 
@@ -96,18 +83,14 @@ export default function Accounts() {
             {/* Action Bar */}
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-semibold">Accounts</h2>
-              <Button
-                onClick={() => setShowAccountDialog(true)}
-                className="hover-lift"
-              >
+              <Button onClick={() => setShowAccountDialog(true)} className="hover-lift">
                 <Plus className="h-4 w-4 mr-2" />
                 New Account
               </Button>
             </div>
 
             {/* Accounts List */}
-            {accounts.length === 0 ? (
-              <Card className="p-12 animated-gradient text-center border-border/40">
+            {accounts.length === 0 ? <Card className="p-12 animated-gradient text-center border-border/40">
                 <p className="text-muted-foreground mb-4">
                   No accounts yet. Create your first account for {currentBrand.name}.
                 </p>
@@ -115,14 +98,7 @@ export default function Accounts() {
                   <Plus className="h-4 w-4 mr-2" />
                   Create Account
                 </Button>
-              </Card>
-            ) : (
-              <AccountsList 
-                accounts={accounts} 
-                brands={[currentBrand]} 
-                onRefresh={fetchData} 
-              />
-            )}
+              </Card> : <AccountsList accounts={accounts} brands={[currentBrand]} onRefresh={fetchData} />}
           </div>
         </div>
 
@@ -135,12 +111,6 @@ export default function Accounts() {
         </div>
       </div>
 
-      <AccountDialog
-        open={showAccountDialog}
-        onOpenChange={setShowAccountDialog}
-        brands={[currentBrand]}
-        onSuccess={fetchData}
-      />
-    </div>
-  );
+      <AccountDialog open={showAccountDialog} onOpenChange={setShowAccountDialog} brands={[currentBrand]} onSuccess={fetchData} />
+    </div>;
 }
