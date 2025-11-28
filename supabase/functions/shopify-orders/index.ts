@@ -205,7 +205,8 @@ serve(async (req) => {
       // At this point, account is guaranteed to be non-null
       if (!account) continue; // Type narrowing for TypeScript
       
-      const amount = parseFloat(item.price) * item.quantity;
+      // Use pre_tax_price (final price after discounts) instead of retail price
+      const amount = parseFloat(item.pre_tax_price || (item.price * item.quantity));
       
       invoicesToCreate.push({
         account_id: account.id,
