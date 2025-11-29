@@ -31,12 +31,12 @@ export function TopNav() {
   const {
     currentBrand
   } = useBrandContext();
-  return <header className="border-b border-border bg-background-surface shadow-soft">
+  return <header className="border-b bg-card">
       <div className="flex items-center h-16 px-6">
         {/* Logo */}
         <div className="flex items-center gap-3 mr-8">
           {currentBrand?.logo_url ? <img src={currentBrand.logo_url} alt={currentBrand.name} className="h-8 w-auto max-w-[200px] object-contain" /> : <>
-              <div className="w-8 h-8 rounded-lg bg-accent glow-accent flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-semibold text-foreground">
@@ -49,7 +49,7 @@ export function TopNav() {
         <nav className="flex items-center gap-1 flex-1">
           {navItems.map(item => {
           const isActive = location.pathname === item.path;
-          return <Link key={item.path} to={item.path} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${isActive ? 'bg-accent text-accent-foreground shadow-soft' : 'text-text-secondary hover:text-foreground hover:bg-background-surface-raised'}`}>
+          return <Link key={item.path} to={item.path} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}>
                 {item.label}
               </Link>;
         })}
@@ -58,11 +58,11 @@ export function TopNav() {
         {/* Right side */}
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => navigate('/store-settings')} className="gap-2">
-            <Store className="h-4 w-4 stroke-2" />
+            <Store className="h-4 w-4" />
             
           </Button>
           <Button variant="ghost" size="sm" onClick={() => navigate('/user-settings')} className="gap-2">
-            <User className="h-4 w-4 stroke-2" />
+            <User className="h-4 w-4" />
             
           </Button>
           <BrandSwitcher />

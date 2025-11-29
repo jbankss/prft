@@ -90,12 +90,12 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md p-8 surface-raised shadow-medium animate-scale-in">
+      <Card className="w-full max-w-md p-8 glass shadow-apple-lg animate-scale-in">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-semibold mb-2 text-foreground">
+          <h1 className="text-3xl font-semibold mb-2">
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </h1>
-          <p className="text-text-secondary">
+          <p className="text-muted-foreground">
             {isSignUp ? 'Sign up to get started' : 'Sign in to your account'}
           </p>
         </div>
@@ -141,7 +141,7 @@ export default function Auth() {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-text-muted">
+                <p className="text-xs text-muted-foreground">
                   Your access request will be reviewed by MJ Fashion Team
                 </p>
               </div>
@@ -188,7 +188,7 @@ export default function Auth() {
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-sm text-text-secondary hover:text-foreground transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
