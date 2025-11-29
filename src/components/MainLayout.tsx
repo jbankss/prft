@@ -32,7 +32,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       <TopNav />
-      <main className="p-6">
+      <main className="p-6 max-w-[1600px] mx-auto">
         {children}
       </main>
     </div>
