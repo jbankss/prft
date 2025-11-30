@@ -89,10 +89,10 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md p-8 glass shadow-apple-lg animate-scale-in">
+    <div className="min-h-screen flex items-center justify-center p-4 animated-gradient">
+      <Card className="w-full max-w-md p-8 shadow-lg animate-scale-in border">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-semibold mb-2">
+          <h1 className="text-3xl font-display mb-2">
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </h1>
           <p className="text-muted-foreground">
@@ -105,15 +105,14 @@ export default function Auth() {
             <>
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="John Doe"
-                  required
-                  className="transition-all duration-200 focus:scale-[1.02]"
-                />
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="John Doe"
+                    required
+                  />
               </div>
 
               <div className="space-y-3">
@@ -157,7 +156,6 @@ export default function Auth() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
               required
-              className="transition-all duration-200 focus:scale-[1.02]"
             />
           </div>
 
@@ -171,13 +169,12 @@ export default function Auth() {
               placeholder="••••••••"
               required
               minLength={6}
-              className="transition-all duration-200 focus:scale-[1.02]"
             />
           </div>
 
           <Button 
             type="submit" 
-            className="w-full transition-all duration-200 hover:scale-[1.02]"
+            className="w-full"
             disabled={isLoading}
           >
             {isLoading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}

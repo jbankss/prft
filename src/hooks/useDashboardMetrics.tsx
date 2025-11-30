@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useBrandContext } from './useBrandContext';
+import { useAuth } from './useAuth';
 import { startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 
 export interface DashboardMetrics {
+  userName: string | null;
   todayRevenue: number;
   yesterdayRevenue: number;
   weekRevenue: number;
@@ -26,6 +28,7 @@ export interface DashboardMetrics {
 
 export function useDashboardMetrics(dateRange?: { start: Date; end: Date }) {
   const { currentBrand } = useBrandContext();
+  const { user } = useAuth();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,6 +37,19 @@ export function useDashboardMetrics(dateRange?: { start: Date; end: Date }) {
 
     try {
       setLoading(true);
+
+      // Fetch user profile for personalized greeting
+      let userName = null;
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+        
+        userName = profile?.full_name || null;
+      }
+
       const now = new Date();
       const today = startOfDay(now);
       const yesterday = startOfDay(subDays(now, 1));
@@ -181,6 +197,7 @@ export function useDashboardMetrics(dateRange?: { start: Date; end: Date }) {
       }) || [];
 
       setMetrics({
+        userName,
         todayRevenue,
         yesterdayRevenue,
         weekRevenue,

@@ -46,10 +46,10 @@ export function TopNav() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex items-center gap-1 flex-1">
+        <nav className="flex items-center gap-6 flex-1">
           {navItems.map(item => {
           const isActive = location.pathname === item.path;
-          return <Link key={item.path} to={item.path} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}>
+          return <Link key={item.path} to={item.path} className={`relative pb-1 text-sm font-medium transition-colors ${isActive ? 'text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 {item.label}
               </Link>;
         })}
