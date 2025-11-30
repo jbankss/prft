@@ -14,46 +14,46 @@ export function QuickStatsRow({ ordersToday, activeVendors, avgOrderValue, pendi
       label: 'Orders Today',
       value: ordersToday,
       icon: ShoppingCart,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
+      color: 'text-foreground',
+      bgColor: 'bg-muted',
     },
     {
       label: 'Active Vendors',
       value: activeVendors,
       icon: Users,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
+      color: 'text-foreground',
+      bgColor: 'bg-muted',
     },
     {
       label: 'Avg Order Value',
       value: `$${avgOrderValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
       icon: DollarSign,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100',
+      color: 'text-foreground',
+      bgColor: 'bg-muted',
     },
     {
       label: 'Pending Payments',
       value: `$${pendingPayments.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
       icon: AlertCircle,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100',
+      color: 'text-foreground',
+      bgColor: 'bg-muted',
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {stats.map((stat) => {
         const Icon = stat.icon;
         
         return (
-          <Card key={stat.label} className="p-6">
+          <Card key={stat.label}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                <p className="text-2xl font-bold">{stat.value}</p>
+                <p className="text-sm text-muted-foreground mb-2">{stat.label}</p>
+                <p className="text-3xl font-display font-semibold">{stat.value}</p>
               </div>
-              <div className={`p-3 rounded-full ${stat.bgColor}`}>
-                <Icon className={`w-6 h-6 ${stat.color}`} />
+              <div className={`p-4 rounded-full ${stat.bgColor}`}>
+                <Icon className={`w-7 h-7 ${stat.color}`} />
               </div>
             </div>
           </Card>

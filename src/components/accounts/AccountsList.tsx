@@ -117,13 +117,13 @@ export function AccountsList({
   };
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-6">
       {accounts.map((account) => {
         const metrics = getAccountMetrics(account);
         const isProfitable = metrics.profitLoss >= 0;
 
         return (
-          <Card key={account.id} className="animated-gradient-slow hover-lift border-border/40">
+          <Card key={account.id} className="hover-lift">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -131,9 +131,9 @@ export function AccountsList({
                     <Building2 className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">{account.account_name}</CardTitle>
+                    <CardTitle className="text-3xl">{account.account_name}</CardTitle>
                     {account.brands && (
-                      <CardDescription>{account.brands.name}</CardDescription>
+                      <CardDescription className="text-base mt-1">{account.brands.name}</CardDescription>
                     )}
                   </div>
                 </div>
@@ -172,51 +172,51 @@ export function AccountsList({
             </CardHeader>
             <CardContent>
               {/* Key Metrics Grid */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1 text-muted-foreground text-xs">
-                    <Package className="h-3 w-3" />
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                    <Package className="h-4 w-4" />
                     <span>Total Purchases</span>
                   </div>
-                  <p className="text-lg font-bold">${metrics.purchases.toLocaleString()}</p>
+                  <p className="text-2xl font-display font-semibold">${metrics.purchases.toLocaleString()}</p>
                 </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1 text-muted-foreground text-xs">
-                    <DollarSign className="h-3 w-3" />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                    <DollarSign className="h-4 w-4" />
                     <span>Total Sales</span>
                   </div>
-                  <p className="text-lg font-bold">${metrics.sales.toLocaleString()}</p>
+                  <p className="text-2xl font-display font-semibold">${metrics.sales.toLocaleString()}</p>
                 </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1 text-muted-foreground text-xs">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
                     {isProfitable ? (
-                      <TrendingUp className="h-3 w-3 text-green-500" />
+                      <TrendingUp className="h-4 w-4 text-success" />
                     ) : (
-                      <TrendingDown className="h-3 w-3 text-red-500" />
+                      <TrendingDown className="h-4 w-4 text-destructive" />
                     )}
                     <span>Net P&L</span>
                   </div>
-                  <p className={`text-lg font-bold ${isProfitable ? 'text-green-500' : 'text-red-500'}`}>
+                  <p className={`text-2xl font-display font-semibold ${isProfitable ? 'text-success' : 'text-destructive'}`}>
                     {isProfitable ? '+' : '-'}${Math.abs(metrics.profitLoss).toLocaleString()}
                   </p>
                 </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1 text-muted-foreground text-xs">
-                    <Calendar className="h-3 w-3" />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                    <Calendar className="h-4 w-4" />
                     <span>Order Cycle</span>
                   </div>
-                  <p className="text-lg font-bold">{metrics.avgDaysBetweenOrders}d</p>
+                  <p className="text-2xl font-display font-semibold">{metrics.avgDaysBetweenOrders}d</p>
                 </div>
               </div>
 
               {/* Additional Info */}
-              <div className="flex items-center justify-between text-sm border-t border-border/40 pt-4">
+              <div className="flex items-center justify-between border-t border-border/50 pt-6">
                 <div>
-                  <span className="text-muted-foreground">Balance: </span>
-                  <span className="font-semibold">${Number(account.balance).toLocaleString()}</span>
+                  <span className="text-muted-foreground text-sm">Balance: </span>
+                  <span className="font-semibold text-lg">${Number(account.balance).toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Last Order: </span>
+                  <span className="text-muted-foreground text-sm">Last Order: </span>
                   <span className="font-medium">{metrics.lastOrderDate.toLocaleDateString()}</span>
                 </div>
                 <Badge variant={account.status === 'active' ? 'default' : 'secondary'}>
@@ -225,13 +225,13 @@ export function AccountsList({
               </div>
 
               {account.notes && (
-                <p className="text-sm text-muted-foreground mt-3 p-3 bg-muted/30 rounded-lg">
+                <p className="text-sm text-muted-foreground mt-6 p-4 bg-muted/30 rounded-2xl">
                   {account.notes}
                 </p>
               )}
 
               {expandedAccounts[account.id] && (
-                <div className="pt-4 mt-4 border-t border-border/40">
+                <div className="pt-6 mt-6 border-t border-border/50">
                   <AccountDetails 
                     accountId={account.id}
                     onClose={() => toggleAccount(account.id)}
