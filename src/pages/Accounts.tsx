@@ -63,17 +63,12 @@ export default function Accounts() {
       </div>;
   }
   return <div className="h-full flex flex-col">
-      {/* Animated Header */}
-      <div className="relative overflow-hidden border-b border-border/40 bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 animate-gradient">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent animate-shimmer" />
-        <div className="relative px-8 py-6">
-          <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="h-8 w-8 text-primary" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-purple-500 to-blue-500 bg-clip-text text-transparent">
-              Brand Headquarters
-            </h1>
-          </div>
-          
+      {/* Header */}
+      <div className="border-b border-border/50 bg-card">
+        <div className="px-8 py-8">
+          <h1 className="text-5xl font-display font-semibold text-foreground">
+            Brand Headquarters
+          </h1>
         </div>
       </div>
 
@@ -122,8 +117,8 @@ export default function Accounts() {
 
         {/* Right Sidebar - Widgets (only on overview) */}
         {activeView === 'overview' && (
-          <div className="w-80 border-l border-border/40 bg-background/50 backdrop-blur-sm p-6 overflow-auto">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+          <div className="w-80 border-l border-border/50 bg-card p-8 overflow-auto">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-6">
               Performance Metrics
             </h3>
             <AccountsWidgets />

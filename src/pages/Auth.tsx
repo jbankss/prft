@@ -89,18 +89,18 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 animated-gradient">
-      <Card className="w-full max-w-md p-8 shadow-lg animate-scale-in border">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <Card className="w-full max-w-md animate-scale-in">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-display mb-2">
+          <h1 className="text-4xl font-display font-semibold mb-3">
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-base">
             {isSignUp ? 'Sign up to get started' : 'Sign in to your account'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {isSignUp && (
             <>
               <div className="space-y-2">
@@ -181,11 +181,11 @@ export default function Auth() {
           </Button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-8 text-center">
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
           >
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
