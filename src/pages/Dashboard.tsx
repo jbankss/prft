@@ -21,12 +21,16 @@ export default function Dashboard() {
         <Skeleton className="h-[400px]" />
       </div>;
   }
+  // Extract first name from full name
+  const firstName = metrics.userName?.split(' ')[0] || null;
+
   return <div className="space-y-6 max-w-[1600px]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-4xl font-bold">Welcome.</h1>
-          
+          <h1 className="text-5xl font-display">
+            {firstName ? `Welcome, ${firstName}!` : 'Welcome.'}
+          </h1>
         </div>
         <DateRangePicker />
       </div>
