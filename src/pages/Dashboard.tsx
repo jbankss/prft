@@ -23,12 +23,11 @@ export default function Dashboard() {
   }
   // Extract first name from full name
   const firstName = metrics.userName?.split(' ')[0] || null;
-
   return <div className="space-y-8 max-w-[1600px]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-6xl font-display font-semibold">
+          <h1 className="font-display font-semibold text-4xl">
             {firstName ? `Welcome, ${firstName}` : 'Welcome'}
           </h1>
         </div>
