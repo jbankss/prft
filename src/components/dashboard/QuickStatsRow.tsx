@@ -46,11 +46,13 @@ export function QuickStatsRow({
       const Icon = stat.icon;
       return <Card key={stat.label}>
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground mb-2">{stat.label}</p>
-                <p className="font-display font-semibold text-2xl">{stat.value}</p>
+                <p className="font-display font-semibold text-2xl truncate" title={String(stat.value)}>
+                  {stat.value}
+                </p>
               </div>
-              <div className={`p-4 rounded-full ${stat.bgColor}`}>
+              <div className={`p-4 rounded-full ${stat.bgColor} flex-shrink-0`}>
                 <Icon className={`w-7 h-7 ${stat.color}`} />
               </div>
             </div>
