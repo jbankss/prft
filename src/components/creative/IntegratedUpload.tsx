@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { supabase } from '@/integrations/supabase/client';
+import { logCreativeActivity } from '@/lib/creativeActivityLogger';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,6 +102,15 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
 
         if (dbError) throw dbError;
 
+        // Log activity
+        await logCreativeActivity({
+          action: 'uploaded_asset',
+          entityType: 'asset',
+          entityId: assetData.id,
+          brandId: currentBrand.id,
+          metadata: { file_name: file.name, file_size: file.size }
+        });
+
         // If AI tagging is enabled and it's an image, analyze it
         if (formData.aiTagging && file.type.startsWith('image/') && assetData) {
           try {
@@ -149,28 +159,28 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold mb-2">Upload Assets</h2>
-        <p className="text-muted-foreground">Upload your creative files with full quality storage</p>
+        <h2 className="text-4xl font-display font-semibold mb-2">Upload Assets</h2>
+        <p className="text-muted-foreground text-lg">Upload your creative files with full quality storage</p>
       </div>
 
-      <Card className="p-6 space-y-6">
+      <Card className="p-10 space-y-8">
         <div
           onDrop={handleFileDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="border-2 border-dashed border-border rounded-xl p-12 text-center hover:border-primary transition-colors cursor-pointer bg-muted/30"
+          className="border-2 border-dashed border-border rounded-3xl p-16 text-center hover:border-primary transition-colors cursor-pointer bg-muted/30"
           onClick={() => document.getElementById('file-input-integrated')?.click()}
         >
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Upload className="h-8 w-8 text-primary" />
+          <div className="flex flex-col items-center gap-6">
+            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Upload className="h-10 w-10 text-primary" />
             </div>
             <div>
-              <p className="text-lg font-medium mb-1">
+              <p className="text-xl font-semibold mb-2">
                 Drop files here or click to browse
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground">
                 Max 500MB per file. Supports images, videos, and design files.
               </p>
             </div>

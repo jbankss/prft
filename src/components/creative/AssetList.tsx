@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, Image, Video, MoreVertical, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { AssetDetailsDialog } from './AssetDetailsDialog';
+import { EnhancedAssetLightbox } from './EnhancedAssetLightbox';
 import { PresenceIndicator } from './PresenceIndicator';
 import { useAssetPresence } from '@/hooks/useAssetPresence';
 interface Asset {
@@ -145,6 +145,6 @@ export function AssetList({
       })}
       </div>
 
-      {selectedAsset && <AssetDetailsDialog asset={selectedAsset} onClose={() => setSelectedAsset(null)} onRefresh={onRefresh} />}
+      {selectedAsset && <EnhancedAssetLightbox asset={selectedAsset} onClose={() => setSelectedAsset(null)} onRefresh={onRefresh} />}
     </>;
 }
