@@ -1,7 +1,8 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Calendar, Zap, Store, User, Settings } from 'lucide-react';
+import { Calendar, Zap, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BrandSwitcher } from './BrandSwitcher';
+import { UserProfileDropdown } from './UserProfileDropdown';
 import { useBrandContext } from '@/hooks/useBrandContext';
 const navItems = [{
   label: 'Home',
@@ -19,8 +20,8 @@ const navItems = [{
   label: 'Payments',
   path: '/payments'
 }, {
-  label: 'Approvals',
-  path: '/approvals'
+  label: 'Personnel',
+  path: '/personnel'
 }, {
   label: 'Customers',
   path: '/customers'
@@ -56,16 +57,12 @@ export function TopNav() {
         </nav>
 
         {/* Right side */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate('/store-settings')} className="gap-2">
             <Store className="h-4 w-4" />
-            
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/user-settings')} className="gap-2">
-            <User className="h-4 w-4" />
-            
           </Button>
           <BrandSwitcher />
+          <UserProfileDropdown />
         </div>
       </div>
     </header>;

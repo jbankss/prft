@@ -10,7 +10,7 @@ import { AccountsWidgets } from '@/components/accounts/AccountsWidgets';
 import { ActivityTimeline } from '@/components/accounts/ActivityTimeline';
 import { BalancesView } from '@/components/accounts/BalancesView';
 import { PaymentsView } from '@/components/accounts/PaymentsView';
-import { CalendarView } from '@/components/accounts/CalendarView';
+import { ImprovedCalendarView } from '@/components/accounts/ImprovedCalendarView';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { toast } from 'sonner';
 export default function Accounts() {
@@ -111,7 +111,7 @@ export default function Accounts() {
             {activeView === 'activity' && <ActivityTimeline brandId={currentBrand.id} />}
             {activeView === 'balances' && <BalancesView brandId={currentBrand.id} />}
             {activeView === 'payments' && <PaymentsView brandId={currentBrand.id} />}
-            {activeView === 'calendar' && <CalendarView brandId={currentBrand.id} />}
+            {activeView === 'calendar' && <ImprovedCalendarView brandId={currentBrand.id} />}
           </div>
         </div>
 

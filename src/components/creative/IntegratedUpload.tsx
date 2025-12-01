@@ -63,6 +63,9 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
 
+        // Update progress: preparing
+        setProgress(((i / files.length) * 100) + 5);
+
         const { error: uploadError } = await supabase.storage
           .from(bucket)
           .upload(filePath, file, {
@@ -72,12 +75,18 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
 
         if (uploadError) throw uploadError;
 
+        // Update progress: uploaded
+        setProgress(((i / files.length) * 100) + 15);
+
         let width, height;
         if (file.type.startsWith('image/')) {
           const img = await createImageBitmap(file);
           width = img.width;
           height = img.height;
         }
+
+        // Update progress: processing
+        setProgress(((i / files.length) * 100) + 20);
 
         // Get initial tags
         let initialTags = formData.tags ? formData.tags.split(',').map(t => t.trim()) : [];
@@ -111,12 +120,18 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
           metadata: { file_name: file.name, file_size: file.size }
         });
 
+        // Update progress: saved
+        setProgress(((i / files.length) * 100) + 25);
+
         // If AI tagging is enabled and it's an image, analyze it
         if (formData.aiTagging && file.type.startsWith('image/') && assetData) {
           try {
             const { data: { publicUrl } } = supabase.storage
               .from(bucket)
               .getPublicUrl(filePath);
+
+            // Update progress: AI analyzing
+            setProgress(((i / files.length) * 100) + 30);
 
             const { data: aiResult } = await supabase.functions.invoke('analyze-image', {
               body: { imageUrl: publicUrl, brandId: currentBrand.id }
@@ -136,6 +151,7 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
           }
         }
 
+        // Update progress: complete for this file
         setProgress(((i + 1) / files.length) * 100);
       }
 

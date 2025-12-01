@@ -28,24 +28,24 @@ export function RevenueOverview({ todayRevenue, yesterdayRevenue, weekRevenue, m
               <span>{Math.abs(todayChange).toFixed(1)}%</span>
             </div>
           </div>
-          <div className="text-4xl font-bold">
-            ${todayRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          <div className="text-4xl font-bold truncate" title={`$${todayRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}>
+            ${todayRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 0 })}
           </div>
         </div>
 
         {/* Week */}
         <div>
           <div className="text-sm text-muted-foreground mb-1">This Week</div>
-          <div className="text-2xl font-semibold">
-            ${weekRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          <div className="text-2xl font-semibold truncate" title={`$${weekRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}>
+            ${weekRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 0 })}
           </div>
         </div>
 
         {/* Month */}
         <div>
           <div className="text-sm text-muted-foreground mb-1">This Month</div>
-          <div className="text-2xl font-semibold">
-            ${monthRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          <div className="text-2xl font-semibold truncate" title={`$${monthRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}>
+            ${monthRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 0 })}
           </div>
         </div>
       </div>

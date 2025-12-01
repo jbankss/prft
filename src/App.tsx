@@ -10,6 +10,7 @@ import { MainLayout } from "@/components/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
 import Creative from "./pages/Creative";
+import Personnel from "./pages/Personnel";
 import Approvals from "./pages/Approvals";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -48,6 +49,7 @@ const App = () => (
                 <Route path="/accounts" element={<MainLayout><Accounts /></MainLayout>} />
                 <Route path="/creative" element={<MainLayout><Creative /></MainLayout>} />
                 <Route path="/integrations" element={<MainLayout><Integrations /></MainLayout>} />
+                <Route path="/personnel" element={<MainLayout><Personnel /></MainLayout>} />
                 <Route path="/approvals" element={<MainLayout><Approvals /></MainLayout>} />
                 <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
                 <Route path="/store-settings" element={<MainLayout><StoreSettings /></MainLayout>} />

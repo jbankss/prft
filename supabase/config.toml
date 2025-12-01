@@ -1,10 +1,10 @@
 project_id = "ulkxtkopehmiszfdjuys"
 
 [functions.analyze-image]
-verify_jwt = false
+verify_jwt = true
 
 [functions.shopify-orders]
 verify_jwt = false
 
 [functions.integration-assistant]
-verify_jwt = false
+verify_jwt = true
