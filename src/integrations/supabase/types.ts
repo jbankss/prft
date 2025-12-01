@@ -1071,6 +1071,7 @@ export type Database = {
           id: string
           phone_number: string | null
           role: string
+          status: string | null
           title: string | null
           updated_at: string
           work_location: string | null
@@ -1084,6 +1085,7 @@ export type Database = {
           id: string
           phone_number?: string | null
           role?: string
+          status?: string | null
           title?: string | null
           updated_at?: string
           work_location?: string | null
@@ -1097,6 +1099,7 @@ export type Database = {
           id?: string
           phone_number?: string | null
           role?: string
+          status?: string | null
           title?: string | null
           updated_at?: string
           work_location?: string | null
@@ -1153,6 +1156,184 @@ export type Database = {
           {
             foreignKeyName: "storage_analytics_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_activity_logs: {
+        Row: {
+          action: string
+          brand_id: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          brand_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          brand_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_activity_logs_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_flags: {
+        Row: {
+          auto_flagged: boolean | null
+          brand_id: string
+          created_at: string
+          description: string | null
+          flag_type: string
+          id: string
+          metadata: Json | null
+          reviewed: boolean | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          severity: string
+          user_id: string
+        }
+        Insert: {
+          auto_flagged?: boolean | null
+          brand_id: string
+          created_at?: string
+          description?: string | null
+          flag_type: string
+          id?: string
+          metadata?: Json | null
+          reviewed?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity: string
+          user_id: string
+        }
+        Update: {
+          auto_flagged?: boolean | null
+          brand_id?: string
+          created_at?: string
+          description?: string | null
+          flag_type?: string
+          id?: string
+          metadata?: Json | null
+          reviewed?: boolean | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_flags_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_flags_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_invitations: {
+        Row: {
+          accepted_at: string | null
+          brand_id: string
+          created_at: string
+          email: string | null
+          expires_at: string
+          id: string
+          invitation_code: string
+          invited_by: string
+          phone_number: string | null
+          role: string
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          brand_id: string
+          created_at?: string
+          email?: string | null
+          expires_at: string
+          id?: string
+          invitation_code: string
+          invited_by: string
+          phone_number?: string | null
+          role?: string
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          brand_id?: string
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invitation_code?: string
+          invited_by?: string
+          phone_number?: string | null
+          role?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invitations_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_invitations_invited_by_fkey"
+            columns: ["invited_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
