@@ -4,13 +4,15 @@ import { useBrandContext } from '@/hooks/useBrandContext';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, FolderOpen } from 'lucide-react';
-import { AssetGallery } from '@/components/creative/AssetGallery';
 import { AssetList } from '@/components/creative/AssetList';
 import { CollectionsView } from '@/components/creative/CollectionsView';
 import { CreativeSidebar } from '@/components/creative/CreativeSidebar';
 import { CreativeWidgets } from '@/components/creative/CreativeWidgets';
 import { IntegratedUpload } from '@/components/creative/IntegratedUpload';
 import { BulkActions } from '@/components/creative/BulkActions';
+import { EnhancedAssetLightbox } from '@/components/creative/EnhancedAssetLightbox';
+import { StorageView } from '@/components/creative/StorageView';
+import { AnalyticsView } from '@/components/creative/AnalyticsView';
 import { toast } from 'sonner';
 export default function Creative() {
   const {
@@ -105,11 +107,11 @@ export default function Creative() {
       <CreativeSidebar activeView={activeView} onViewChange={setActiveView} />
       
       <main className="flex-1 overflow-auto">
-        <div className="p-8 space-y-6">
+        <div className="p-12 space-y-8">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-semibold mb-1">
+              <h1 className="text-5xl font-display font-semibold mb-2">
                 {activeView === 'overview' && 'Creative Studio'}
                 {activeView === 'assets' && 'Assets'}
                 {activeView === 'upload' && 'Upload'}
@@ -117,36 +119,43 @@ export default function Creative() {
                 {activeView === 'analytics' && 'Analytics'}
                 {activeView === 'storage' && 'Storage'}
               </h1>
-              
+              <p className="text-muted-foreground text-lg">
+                {activeView === 'overview' && 'Manage your creative assets'}
+                {activeView === 'assets' && 'Browse and organize files'}
+                {activeView === 'upload' && 'Add new creative assets'}
+                {activeView === 'collections' && 'Curated asset collections'}
+                {activeView === 'analytics' && 'Usage and performance metrics'}
+                {activeView === 'storage' && 'Storage management and cleanup'}
+              </p>
             </div>
           </div>
 
           {/* Overview */}
-          {activeView === 'overview' && <div className="space-y-6">
+          {activeView === 'overview' && <div className="space-y-8">
               <CreativeWidgets totalAssets={assets.length} storageUsed={usedStorage} storageTotal={totalStorage} recentCount={recentCount} />
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Recent Assets</h2>
-                    <button onClick={() => setActiveView('assets')} className="text-sm text-primary hover:underline">
+                    <h2 className="text-2xl font-display font-semibold">Recent Assets</h2>
+                    <button onClick={() => setActiveView('assets')} className="text-sm text-primary hover:underline font-medium">
                       See all →
                     </button>
                   </div>
                   <AssetList assets={assets.slice(0, 5)} onRefresh={fetchAssets} selectedIds={[]} />
                 </div>
 
-                <div className="space-y-4">
-                  <h2 className="text-xl font-semibold">Quick Actions</h2>
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-display font-semibold">Quick Actions</h2>
                   <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => setActiveView('upload')} className="p-6 bg-card border border-border rounded-xl hover:bg-accent transition-colors text-left">
-                      <Search className="h-8 w-8 mb-3 text-primary" />
-                      <h3 className="font-medium mb-1">Upload Files</h3>
+                    <button onClick={() => setActiveView('upload')} className="p-8 bg-card border border-border rounded-3xl hover:bg-muted/50 transition-colors text-left">
+                      <Search className="h-10 w-10 mb-4 text-primary" />
+                      <h3 className="font-semibold mb-1 text-lg">Upload Files</h3>
                       <p className="text-sm text-muted-foreground">Add new assets</p>
                     </button>
-                    <button onClick={() => setActiveView('collections')} className="p-6 bg-card border border-border rounded-xl hover:bg-accent transition-colors text-left">
-                      <FolderOpen className="h-8 w-8 mb-3 text-primary" />
-                      <h3 className="font-medium mb-1">Collections</h3>
+                    <button onClick={() => setActiveView('collections')} className="p-8 bg-card border border-border rounded-3xl hover:bg-muted/50 transition-colors text-left">
+                      <FolderOpen className="h-10 w-10 mb-4 text-primary" />
+                      <h3 className="font-semibold mb-1 text-lg">Collections</h3>
                       <p className="text-sm text-muted-foreground">Organize assets</p>
                     </button>
                   </div>
@@ -208,14 +217,10 @@ export default function Creative() {
           {activeView === 'collections' && <CollectionsView onRefresh={fetchAssets} />}
 
           {/* Analytics View */}
-          {activeView === 'analytics' && <div className="text-center py-12 bg-card rounded-xl border border-border">
-              <p className="text-muted-foreground">Analytics coming soon</p>
-            </div>}
+          {activeView === 'analytics' && <AnalyticsView />}
 
           {/* Storage View */}
-          {activeView === 'storage' && <div className="text-center py-12 bg-card rounded-xl border border-border">
-              <p className="text-muted-foreground">Storage management coming soon</p>
-            </div>}
+          {activeView === 'storage' && <StorageView />}
         </div>
       </main>
     </div>;

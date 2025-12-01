@@ -103,6 +103,61 @@ export type Database = {
           },
         ]
       }
+      asset_approvals: {
+        Row: {
+          asset_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_approvals_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "creative_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_approvals_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_approvals_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_collections: {
         Row: {
           brand_id: string | null
@@ -152,6 +207,48 @@ export type Database = {
           {
             foreignKeyName: "asset_collections_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_comments: {
+        Row: {
+          asset_id: string
+          comment: string
+          created_at: string
+          id: string
+          is_revision: boolean | null
+          user_id: string
+        }
+        Insert: {
+          asset_id: string
+          comment: string
+          created_at?: string
+          id?: string
+          is_revision?: boolean | null
+          user_id: string
+        }
+        Update: {
+          asset_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          is_revision?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_comments_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "creative_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_comments_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -769,6 +866,54 @@ export type Database = {
           },
         ]
       }
+      creative_activity_logs: {
+        Row: {
+          action: string
+          brand_id: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          brand_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          brand_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_activity_logs_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creative_assets: {
         Row: {
           brand_id: string | null
@@ -962,6 +1107,54 @@ export type Database = {
             columns: ["current_brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      storage_analytics: {
+        Row: {
+          brand_id: string
+          created_at: string
+          date: string
+          files_by_type: Json | null
+          id: string
+          total_files: number | null
+          total_size: number | null
+          user_id: string | null
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          date?: string
+          files_by_type?: Json | null
+          id?: string
+          total_files?: number | null
+          total_size?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          date?: string
+          files_by_type?: Json | null
+          id?: string
+          total_files?: number | null
+          total_size?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storage_analytics_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storage_analytics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

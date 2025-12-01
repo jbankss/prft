@@ -65,38 +65,40 @@ export function CollectionsView({ onRefresh }: { onRefresh: () => void }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Collections</h3>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
+        <h3 className="text-3xl font-display font-semibold">Collections</h3>
+        <Button size="lg">
+          <Plus className="h-5 w-5 mr-2" />
           New Collection
         </Button>
       </div>
 
       {collections.length === 0 ? (
-        <Card className="p-12 text-center animated-gradient-slow">
-          <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-4">
+        <Card className="p-16 text-center">
+          <FolderOpen className="h-16 w-16 mx-auto text-muted-foreground mb-6" />
+          <p className="text-muted-foreground mb-6 text-lg">
             No collections yet. Create collections to organize your assets.
           </p>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button size="lg">
+            <Plus className="h-5 w-5 mr-2" />
             Create Collection
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {collections.map((collection) => (
             <Card
               key={collection.id}
-              className="p-6 hover-lift cursor-pointer animated-gradient-slow"
+              className="p-8 hover:shadow-md cursor-pointer transition-all"
               onClick={() => setSelectedCollection(collection)}
             >
-              <div className="flex items-center gap-3 mb-3">
-                <FolderOpen className="h-8 w-8 text-primary" />
-                <div>
-                  <h4 className="font-semibold">{collection.name}</h4>
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <FolderOpen className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-display font-semibold text-xl mb-1">{collection.name}</h4>
                   {collection.description && (
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {collection.description}

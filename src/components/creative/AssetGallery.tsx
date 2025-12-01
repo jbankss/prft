@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Image, Video, FileText, Download } from 'lucide-react';
-import { AssetDetailsDialog } from './AssetDetailsDialog';
+import { EnhancedAssetLightbox } from './EnhancedAssetLightbox';
 
 interface Asset {
   id: string;
@@ -116,7 +116,7 @@ export function AssetGallery({
       </div>
 
       {selectedAsset && (
-        <AssetDetailsDialog
+        <EnhancedAssetLightbox
           asset={selectedAsset}
           onClose={() => setSelectedAsset(null)}
           onRefresh={onRefresh}
