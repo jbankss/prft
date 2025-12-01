@@ -119,14 +119,7 @@ export default function Creative() {
                 {activeView === 'analytics' && 'Analytics'}
                 {activeView === 'storage' && 'Storage'}
               </h1>
-              <p className="text-muted-foreground text-lg">
-                {activeView === 'overview' && 'Manage your creative assets'}
-                {activeView === 'assets' && 'Browse and organize files'}
-                {activeView === 'upload' && 'Add new creative assets'}
-                {activeView === 'collections' && 'Curated asset collections'}
-                {activeView === 'analytics' && 'Usage and performance metrics'}
-                {activeView === 'storage' && 'Storage management and cleanup'}
-              </p>
+              
             </div>
           </div>
 
