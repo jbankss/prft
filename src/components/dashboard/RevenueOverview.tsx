@@ -29,7 +29,7 @@ export function RevenueOverview({ todayRevenue, yesterdayRevenue, weekRevenue, m
             </div>
           </div>
           <div className="text-4xl font-bold truncate" title={`$${todayRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}>
-            ${todayRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 0 })}
+            ${todayRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
           </div>
         </div>
 
@@ -37,7 +37,7 @@ export function RevenueOverview({ todayRevenue, yesterdayRevenue, weekRevenue, m
         <div>
           <div className="text-sm text-muted-foreground mb-1">This Week</div>
           <div className="text-2xl font-semibold truncate" title={`$${weekRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}>
-            ${weekRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 0 })}
+            ${weekRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
           </div>
         </div>
 
@@ -45,7 +45,7 @@ export function RevenueOverview({ todayRevenue, yesterdayRevenue, weekRevenue, m
         <div>
           <div className="text-sm text-muted-foreground mb-1">This Month</div>
           <div className="text-2xl font-semibold truncate" title={`$${monthRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}>
-            ${monthRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 0 })}
+            ${monthRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
           </div>
         </div>
       </div>
