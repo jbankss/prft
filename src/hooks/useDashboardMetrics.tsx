@@ -16,7 +16,7 @@ export interface DashboardMetrics {
   pendingPayments: number;
   dailyRevenue: { date: string; amount: number }[];
   topVendors: { name: string; revenue: number; orderCount: number; avgOrderValue: number }[];
-  salesChannels: { pos: number; online: number };
+  salesChannels: { pos: number; online: number; tiktok: number };
   recentOrders: {
     orderNumber: string;
     vendor: string;
@@ -151,50 +151,35 @@ export function useDashboardMetrics(dateRange?: { start: Date; end: Date }) {
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 10);
 
-      // Sales channels from webhook logs
-      const { data: webhookLogs } = await supabase
-        .from('webhook_logs')
-        .select('request_data')
-        .eq('brand_id', currentBrand.id)
-        .eq('status', 'success');
-
+      // Sales channels from invoices source field
       let posRevenue = 0;
       let onlineRevenue = 0;
+      let tiktokRevenue = 0;
 
-      webhookLogs?.forEach(log => {
-        const data = log.request_data as any;
-        const source = data?.source_name?.toLowerCase() || '';
-        const amount = Number(data?.current_total_price || 0);
+      invoices?.forEach(inv => {
+        const source = (inv.source || '').toLowerCase();
+        const amount = Number(inv.amount);
         
-        if (source.includes('pos') || source.includes('point of sale')) {
+        if (source === 'pos') {
           posRevenue += amount;
+        } else if (source === 'tiktok') {
+          tiktokRevenue += amount;
         } else {
           onlineRevenue += amount;
         }
       });
 
-      // Recent orders from webhook logs
-      const { data: recentWebhooks } = await supabase
-        .from('webhook_logs')
-        .select('*')
-        .eq('brand_id', currentBrand.id)
-        .eq('status', 'success')
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      const recentOrders = recentWebhooks?.map(log => {
-        const data = log.request_data as any;
-        const lineItems = data?.line_items || [];
-        const vendor = lineItems[0]?.vendor || 'Unknown';
-        
-        return {
-          orderNumber: data?.name || data?.order_number || 'N/A',
-          vendor,
-          amount: Number(data?.current_total_price || 0),
-          time: new Date(log.created_at).toISOString(),
-          source: data?.source_name || 'Online',
-        };
-      }) || [];
+      // Recent orders from invoices
+      const recentOrders = invoices
+        ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 20)
+        .map(inv => ({
+          orderNumber: inv.invoice_number,
+          vendor: (inv.accounts as any).account_name,
+          amount: Number(inv.amount),
+          time: inv.created_at,
+          source: inv.source || 'online',
+        })) || [];
 
       setMetrics({
         userName,
@@ -208,7 +193,7 @@ export function useDashboardMetrics(dateRange?: { start: Date; end: Date }) {
         pendingPayments,
         dailyRevenue,
         topVendors,
-        salesChannels: { pos: posRevenue, online: onlineRevenue },
+        salesChannels: { pos: posRevenue, online: onlineRevenue, tiktok: tiktokRevenue },
         recentOrders,
       });
     } catch (error) {

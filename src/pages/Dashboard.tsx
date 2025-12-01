@@ -53,7 +53,7 @@ export default function Dashboard() {
       {/* Bottom Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <TopVendorsLeaderboard vendors={metrics.topVendors} />
-        <SalesChannelBreakdown pos={metrics.salesChannels.pos} online={metrics.salesChannels.online} />
+        <SalesChannelBreakdown pos={metrics.salesChannels.pos} online={metrics.salesChannels.online} tiktok={metrics.salesChannels.tiktok} />
         <RecentOrdersFeed orders={metrics.recentOrders} />
       </div>
     </div>;
