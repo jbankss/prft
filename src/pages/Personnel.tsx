@@ -101,8 +101,32 @@ export default function Personnel() {
         created_at: r.profiles.created_at,
       })) || [];
 
+      // Include current user if not already in the list
+      if (user && !teamMembers.find(m => m.id === user.id)) {
+        const { data: currentUserProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (currentUserProfile) {
+          teamMembers.unshift({
+            id: currentUserProfile.id,
+            email: currentUserProfile.email,
+            full_name: currentUserProfile.full_name,
+            avatar_url: currentUserProfile.avatar_url,
+            status: currentUserProfile.status || 'online',
+            role: 'admin',
+            phone_number: currentUserProfile.phone_number,
+            title: currentUserProfile.title,
+            created_at: currentUserProfile.created_at,
+          });
+        }
+      }
+
       setMembers(teamMembers);
     } catch (error: any) {
+      console.error('Error fetching members:', error);
       toast.error('Failed to fetch team members');
     } finally {
       setLoading(false);
