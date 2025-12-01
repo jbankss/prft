@@ -67,47 +67,59 @@ export default function Personnel() {
 
   const fetchMembers = async () => {
     try {
-      const { data: roles, error } = await supabase
+      // First fetch roles for this brand
+      const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
-        .select(`
-          user_id,
-          role,
-          approved,
-          profiles!user_roles_user_id_fkey (
-            id,
-            email,
-            full_name,
-            avatar_url,
-            status,
-            phone_number,
-            title,
-            created_at
-          )
-        `)
+        .select('user_id, role, approved, brand_id')
         .eq('brand_id', currentBrand.id)
         .eq('approved', true);
 
-      if (error) throw error;
+      if (rolesError) throw rolesError;
 
-      const teamMembers = roles?.map((r: any) => ({
-        id: r.profiles.id,
-        email: r.profiles.email,
-        full_name: r.profiles.full_name,
-        avatar_url: r.profiles.avatar_url,
-        status: r.profiles.status || 'online',
-        role: r.role,
-        phone_number: r.profiles.phone_number,
-        title: r.profiles.title,
-        created_at: r.profiles.created_at,
-      })) || [];
+      const userIds = roles?.map((r) => r.user_id) || [];
+
+      // Fetch corresponding profiles in a separate query since there is no FK relationship
+      let profiles: any[] = [];
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, email, full_name, avatar_url, status, phone_number, title, created_at')
+          .in('id', userIds);
+
+        if (profilesError) throw profilesError;
+        profiles = profilesData || [];
+      }
+
+      const teamMembers: TeamMember[] = (roles || [])
+        .map((r: any) => {
+          const profile = profiles.find((p) => p.id === r.user_id);
+          if (!profile) return null;
+
+          return {
+            id: profile.id,
+            email: profile.email,
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
+            status: profile.status || 'online',
+            role: r.role,
+            phone_number: profile.phone_number,
+            title: profile.title,
+            created_at: profile.created_at,
+          } as TeamMember;
+        })
+        .filter(Boolean) as TeamMember[];
 
       // Include current user if not already in the list
-      if (user && !teamMembers.find(m => m.id === user.id)) {
-        const { data: currentUserProfile } = await supabase
+      if (user && !teamMembers.find((m) => m.id === user.id)) {
+        const { data: currentUserProfile, error: currentUserError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single();
+
+        if (currentUserError) {
+          console.error('Error fetching current user profile:', currentUserError);
+        }
 
         if (currentUserProfile) {
           teamMembers.unshift({
