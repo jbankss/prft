@@ -1,35 +1,37 @@
 import { Card } from '@/components/ui/card';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { Store, Globe } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { Store, Globe, Video } from 'lucide-react';
 
 interface SalesChannelBreakdownProps {
   pos: number;
   online: number;
+  tiktok: number;
 }
 
-export function SalesChannelBreakdown({ pos, online }: SalesChannelBreakdownProps) {
-  const total = pos + online;
+export function SalesChannelBreakdown({ pos, online, tiktok }: SalesChannelBreakdownProps) {
+  const total = pos + online + tiktok;
   const data = [
     { name: 'POS', value: pos, icon: Store },
     { name: 'Online', value: online, icon: Globe },
-  ];
+    { name: 'TikTok Shop', value: tiktok, icon: Video },
+  ].filter(item => item.value > 0);
 
-  const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))'];
+  const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))'];
 
   return (
     <Card className="p-6">
       <h3 className="text-lg font-semibold mb-6">Sales Channels</h3>
 
-      <div className="h-[250px]">
+      <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={90}
-              paddingAngle={5}
+              innerRadius={50}
+              outerRadius={80}
+              paddingAngle={3}
               dataKey="value"
             >
               {data.map((entry, index) => (
@@ -56,21 +58,23 @@ export function SalesChannelBreakdown({ pos, online }: SalesChannelBreakdownProp
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mt-4">
-        {data.map((item, index) => {
+      <div className="grid grid-cols-3 gap-2 mt-4">
+        {[
+          { name: 'POS', value: pos, icon: Store },
+          { name: 'Online', value: online, icon: Globe },
+          { name: 'TikTok', value: tiktok, icon: Video },
+        ].map((item, index) => {
           const Icon = item.icon;
           const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0;
           
           return (
-            <div key={item.name} className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }} />
-              <div className="flex-1">
-                <div className="flex items-center gap-1">
-                  <Icon className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{item.name}</span>
-                </div>
-                <div className="text-xs text-muted-foreground">{percentage}%</div>
+            <div key={item.name} className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index] }} />
+                <Icon className="w-3 h-3 text-muted-foreground" />
               </div>
+              <div className="text-xs font-medium">{item.name}</div>
+              <div className="text-xs text-muted-foreground">{percentage}%</div>
             </div>
           );
         })}
