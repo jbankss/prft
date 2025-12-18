@@ -203,230 +203,198 @@ export function AccountDetails({
           )}
         </SheetHeader>
 
-        <div className="flex-1 flex overflow-hidden">
-          {/* Side Navigation */}
-          <div className="w-16 border-r bg-muted/30 flex flex-col items-center py-4 gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-lg"
-              onClick={() => document.getElementById('tab-overview')?.click()}
-            >
-              <Package className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-lg"
-              onClick={() => document.getElementById('tab-chat')?.click()}
-            >
-              <FileText className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-lg"
-              onClick={() => document.getElementById('tab-charges')?.click()}
-            >
-              <DollarSign className="h-5 w-5" />
-            </Button>
-          </div>
+        <div className="flex-1 overflow-hidden">
+          <Tabs defaultValue="overview" className="h-full flex flex-col">
+            <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-6">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="chat">Chat</TabsTrigger>
+              <TabsTrigger value="invoices">Invoices</TabsTrigger>
+              <TabsTrigger value="charges">Charges</TabsTrigger>
+            </TabsList>
 
-          {/* Content Area */}
-          <div className="flex-1 overflow-hidden">
-            <Tabs defaultValue="overview" className="h-full flex flex-col">
-              <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-6">
-                <TabsTrigger value="overview" id="tab-overview">Overview</TabsTrigger>
-                <TabsTrigger value="chat" id="tab-chat">Chat</TabsTrigger>
-                <TabsTrigger value="charges" id="tab-charges">Charges</TabsTrigger>
-                <TabsTrigger value="invoices" id="tab-invoices">Invoices</TabsTrigger>
-              </TabsList>
+            <div className="flex-1 overflow-hidden">
+              <TabsContent value="overview" className="h-full m-0 p-6 overflow-auto">
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Account Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Status</p>
+                          <p className="font-medium capitalize">{account?.status || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Created</p>
+                          <p className="font-medium">
+                            {account?.created_at ? new Date(account.created_at).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                      {account?.notes && (
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-1">Notes</p>
+                          <p className="text-sm">{account.notes}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
 
-              <div className="flex-1 overflow-hidden">
-                <TabsContent value="overview" className="h-full m-0 p-6 overflow-auto">
-                  <div className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Account Information</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground">Status</p>
-                            <p className="font-medium capitalize">{account?.status || 'N/A'}</p>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <CardTitle>Amount Owed</CardTitle>
+                      {!editingBalance && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingBalance(true)}
+                        >
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      {editingBalance ? (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="manual_balance">Amount Owed ($)</Label>
+                            <Input
+                              id="manual_balance"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={newBalance}
+                              onChange={(e) => setNewBalance(e.target.value)}
+                              placeholder="0.00"
+                            />
                           </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Created</p>
-                            <p className="font-medium">
-                              {account?.created_at ? new Date(account.created_at).toLocaleDateString() : 'N/A'}
-                            </p>
+                          <div className="space-y-2">
+                            <Label htmlFor="balance_notes">Notes</Label>
+                            <Input
+                              id="balance_notes"
+                              value={newBalanceNotes}
+                              onChange={(e) => setNewBalanceNotes(e.target.value)}
+                              placeholder="e.g., PO #12345, Due on 12/30"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              onClick={saveBalance} 
+                              disabled={savingBalance}
+                              size="sm"
+                            >
+                              <Check className="h-4 w-4 mr-2" />
+                              Save
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingBalance(false);
+                                setNewBalance(String(account?.manual_balance || 0));
+                                setNewBalanceNotes(account?.balance_notes || '');
+                              }}
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Cancel
+                            </Button>
                           </div>
                         </div>
-                        {account?.notes && (
-                          <div>
-                            <p className="text-sm text-muted-foreground mb-1">Notes</p>
-                            <p className="text-sm">{account.notes}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    {/* Amount Owed Card - Editable */}
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle>Amount Owed</CardTitle>
-                        {!editingBalance && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingBalance(true)}
-                          >
-                            <Edit2 className="h-4 w-4 mr-2" />
-                            Edit
-                          </Button>
-                        )}
-                      </CardHeader>
-                      <CardContent>
-                        {editingBalance ? (
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="manual_balance">Amount Owed ($)</Label>
-                              <Input
-                                id="manual_balance"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={newBalance}
-                                onChange={(e) => setNewBalance(e.target.value)}
-                                placeholder="0.00"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="balance_notes">Notes</Label>
-                              <Input
-                                id="balance_notes"
-                                value={newBalanceNotes}
-                                onChange={(e) => setNewBalanceNotes(e.target.value)}
-                                placeholder="e.g., PO #12345, Due on 12/30"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <Button 
-                                onClick={saveBalance} 
-                                disabled={savingBalance}
-                                size="sm"
-                              >
-                                <Check className="h-4 w-4 mr-2" />
-                                Save
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingBalance(false);
-                                  setNewBalance(String(account?.manual_balance || 0));
-                                  setNewBalanceNotes(account?.balance_notes || '');
-                                }}
-                              >
-                                <X className="h-4 w-4 mr-2" />
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <p className="text-3xl font-bold text-destructive">
-                              ${Number(account?.manual_balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ) : (
+                        <div>
+                          <p className="text-3xl font-bold text-destructive">
+                            ${Number(account?.manual_balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </p>
+                          {account?.balance_notes && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                              {account.balance_notes}
                             </p>
-                            {account?.balance_notes && (
-                              <p className="text-sm text-muted-foreground mt-2">
-                                {account.balance_notes}
-                              </p>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="chat" className="h-full m-0 flex flex-col">
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <ScrollArea className="flex-1 p-6">
+                    <div className="space-y-4">
+                      {messages.map((msg) => {
+                        const isSystem = msg.is_system;
+                        
+                        return (
+                          <div key={msg.id} className={`flex gap-3 ${isSystem ? 'justify-center' : ''}`}>
+                            {isSystem ? (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-full">
+                                <Bot className="h-3 w-3" />
+                                <span className="italic">{msg.message}</span>
+                                <span className="text-muted-foreground/60">
+                                  {format(new Date(msg.created_at), 'MMM d, h:mm a')}
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={msg.profiles?.avatar_url || ''} />
+                                  <AvatarFallback>
+                                    {msg.profiles?.full_name?.[0] || 'U'}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-sm">
+                                      {msg.profiles?.full_name || 'User'}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {format(new Date(msg.created_at), 'MMM d, h:mm a')}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm bg-muted/50 rounded-lg px-3 py-2">
+                                    {msg.message}
+                                  </p>
+                                </div>
+                              </>
                             )}
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="chat" className="h-full m-0 flex flex-col">
-                  <div className="flex-1 flex flex-col overflow-hidden">
-                    <ScrollArea className="flex-1 p-6">
-                      <div className="space-y-4">
-                        {messages.map((msg) => {
-                          const isSystem = msg.is_system;
-                          
-                          return (
-                            <div key={msg.id} className={`flex gap-3 ${isSystem ? 'justify-center' : ''}`}>
-                              {isSystem ? (
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-full">
-                                  <Bot className="h-3 w-3" />
-                                  <span className="italic">{msg.message}</span>
-                                  <span className="text-muted-foreground/60">
-                                    {format(new Date(msg.created_at), 'MMM d, h:mm a')}
-                                  </span>
-                                </div>
-                              ) : (
-                                <>
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage src={msg.profiles?.avatar_url || ''} />
-                                    <AvatarFallback>
-                                      {msg.profiles?.full_name?.[0] || 'U'}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="font-medium text-sm">
-                                        {msg.profiles?.full_name || 'User'}
-                                      </span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {format(new Date(msg.created_at), 'MMM d, h:mm a')}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm bg-muted/50 rounded-lg px-3 py-2">
-                                      {msg.message}
-                                    </p>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
-                        {messages.length === 0 && (
-                          <div className="text-center py-12">
-                            <p className="text-muted-foreground">No messages yet. Start a conversation!</p>
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                    <div className="p-4 border-t">
-                      <div className="flex gap-2">
-                        <Input
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          placeholder="Type a message..."
-                          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                          disabled={loading}
-                        />
-                        <Button onClick={sendMessage} disabled={loading || !newMessage.trim()}>
-                          <Send className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        );
+                      })}
+                      {messages.length === 0 && (
+                        <div className="text-center py-12">
+                          <p className="text-muted-foreground">No messages yet. Start a conversation!</p>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                  <div className="p-4 border-t">
+                    <div className="flex gap-2">
+                      <Input
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type a message..."
+                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                        disabled={loading}
+                      />
+                      <Button onClick={sendMessage} disabled={loading || !newMessage.trim()}>
+                        <Send className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                </TabsContent>
+                </div>
+              </TabsContent>
 
-                <TabsContent value="invoices" className="h-full m-0 p-6 overflow-auto">
-                  <InvoicesList accountId={accountId} onRefresh={onRefresh} />
-                </TabsContent>
+              <TabsContent value="invoices" className="h-full m-0 p-6 overflow-auto">
+                <InvoicesList accountId={accountId} onRefresh={onRefresh} />
+              </TabsContent>
 
-                <TabsContent value="charges" className="h-full m-0 p-6 overflow-auto">
-                  <ChargesList accountId={accountId} onRefresh={onRefresh} />
-                </TabsContent>
-              </div>
-            </Tabs>
-          </div>
+              <TabsContent value="charges" className="h-full m-0 p-6 overflow-auto">
+                <ChargesList accountId={accountId} onRefresh={onRefresh} />
+              </TabsContent>
+            </div>
+          </Tabs>
         </div>
       </SheetContent>
     </Sheet>
