@@ -422,6 +422,14 @@ async function runImport(
         try {
           // Use actual order date from Shopify, not import time
           const orderDate = order.created_at.split('T')[0];
+          const orderDateTime = order.created_at;
+          
+          // Update progress with current order info for real-time display
+          await updateProgress({
+            status: 'processing',
+            current_order_number: `#${order.order_number}`,
+            current_order_date: orderDateTime,
+          });
           
           for (const item of order.line_items || []) {
             const vendor = item.vendor;
@@ -480,15 +488,16 @@ async function runImport(
 
           results.orders_processed++;
 
-          if (results.orders_processed % 5 === 0) {
-            await updateProgress({
-              orders_processed: results.orders_processed,
-              invoices_created: results.invoices_created,
-              accounts_created: results.accounts_created,
-              errors: results.errors.length,
-              error_details: results.errors.slice(-10),
-            });
-          }
+          // Update progress after each order for real-time tracking
+          await updateProgress({
+            orders_processed: results.orders_processed,
+            invoices_created: results.invoices_created,
+            accounts_created: results.accounts_created,
+            errors: results.errors.length,
+            error_details: results.errors.slice(-10),
+            current_order_number: `#${order.order_number}`,
+            current_order_date: orderDateTime,
+          });
         } catch (err) {
           console.error(`Error processing order ${order.id}:`, err);
           results.errors.push(`Order ${order.order_number}: ${err instanceof Error ? err.message : 'Unknown error'}`);

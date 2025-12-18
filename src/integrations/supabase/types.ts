@@ -1015,6 +1015,8 @@ export type Database = {
           accounts_created: number | null
           brand_id: string
           completed_at: string | null
+          current_order_date: string | null
+          current_order_number: string | null
           error_details: Json | null
           errors: number | null
           id: string
@@ -1030,6 +1032,8 @@ export type Database = {
           accounts_created?: number | null
           brand_id: string
           completed_at?: string | null
+          current_order_date?: string | null
+          current_order_number?: string | null
           error_details?: Json | null
           errors?: number | null
           id?: string
@@ -1045,6 +1049,8 @@ export type Database = {
           accounts_created?: number | null
           brand_id?: string
           completed_at?: string | null
+          current_order_date?: string | null
+          current_order_number?: string | null
           error_details?: Json | null
           errors?: number | null
           id?: string

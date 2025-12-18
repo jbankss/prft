@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
-import { DollarSign, FileText, Plus, TrendingUp } from 'lucide-react';
+import { DollarSign, FileText, Plus, TrendingUp, ShoppingCart } from 'lucide-react';
 
 interface CalendarEvent {
   id: string;
   date: Date;
-  type: 'charge' | 'invoice' | 'account';
+  type: 'charge' | 'order' | 'account';
   title: string;
   amount?: number;
   accountName: string;
@@ -85,23 +84,27 @@ export function ImprovedCalendarView({ brandId }: { brandId: string }) {
         });
       });
 
-      // Fetch invoices
+      // Fetch orders (invoices) - use due_date for actual order date
       const { data: invoices } = await supabase
         .from('invoices')
         .select('*, accounts(account_name)')
-        .in('account_id', accountIds)
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString());
+        .in('account_id', accountIds);
 
       invoices?.forEach((invoice) => {
-        allEvents.push({
-          id: invoice.id,
-          date: new Date(invoice.created_at),
-          type: 'invoice',
-          title: `Invoice ${invoice.invoice_number}`,
-          amount: Number(invoice.amount),
-          accountName: invoice.accounts.account_name,
-        });
+        // Use due_date (actual order date from Shopify) if available, otherwise created_at
+        const orderDate = new Date(invoice.due_date || invoice.created_at);
+        
+        // Only include if order date is in current month
+        if (orderDate >= start && orderDate <= end) {
+          allEvents.push({
+            id: invoice.id,
+            date: orderDate,
+            type: 'order',
+            title: `Order ${invoice.invoice_number}`,
+            amount: Number(invoice.amount),
+            accountName: invoice.accounts.account_name,
+          });
+        }
       });
 
       setEvents(allEvents);
@@ -120,7 +123,7 @@ export function ImprovedCalendarView({ brandId }: { brandId: string }) {
     const dayEvents = getEventsForDate(date);
     return {
       charges: dayEvents.filter(e => e.type === 'charge'),
-      invoices: dayEvents.filter(e => e.type === 'invoice'),
+      orders: dayEvents.filter(e => e.type === 'order'),
       accounts: dayEvents.filter(e => e.type === 'account'),
     };
   };
@@ -131,8 +134,8 @@ export function ImprovedCalendarView({ brandId }: { brandId: string }) {
     switch (type) {
       case 'charge':
         return DollarSign;
-      case 'invoice':
-        return FileText;
+      case 'order':
+        return ShoppingCart;
       case 'account':
         return Plus;
       default:
@@ -144,7 +147,7 @@ export function ImprovedCalendarView({ brandId }: { brandId: string }) {
     switch (type) {
       case 'charge':
         return 'text-red-500 bg-red-500/10 border-red-500/20';
-      case 'invoice':
+      case 'order':
         return 'text-green-500 bg-green-500/10 border-green-500/20';
       case 'account':
         return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
@@ -152,12 +155,6 @@ export function ImprovedCalendarView({ brandId }: { brandId: string }) {
         return 'text-muted-foreground bg-muted';
     }
   };
-
-  // Generate all days in current month
-  const monthDays = eachDayOfInterval({
-    start: startOfMonth(currentMonth),
-    end: endOfMonth(currentMonth),
-  });
 
   if (loading) {
     return (
@@ -192,7 +189,7 @@ export function ImprovedCalendarView({ brandId }: { brandId: string }) {
             components={{
               DayContent: ({ date, ...props }) => {
                 const dayEvents = getEventsByType(date);
-                const hasEvents = dayEvents.charges.length + dayEvents.invoices.length + dayEvents.accounts.length > 0;
+                const hasEvents = dayEvents.charges.length + dayEvents.orders.length + dayEvents.accounts.length > 0;
                 const isCurrentMonth = isSameMonth(date, currentMonth);
 
                 return (
@@ -203,8 +200,8 @@ export function ImprovedCalendarView({ brandId }: { brandId: string }) {
                         {dayEvents.charges.length > 0 && (
                           <div className="w-1 h-1 rounded-full bg-red-500" title={`${dayEvents.charges.length} charge(s)`} />
                         )}
-                        {dayEvents.invoices.length > 0 && (
-                          <div className="w-1 h-1 rounded-full bg-green-500" title={`${dayEvents.invoices.length} invoice(s)`} />
+                        {dayEvents.orders.length > 0 && (
+                          <div className="w-1 h-1 rounded-full bg-green-500" title={`${dayEvents.orders.length} order(s)`} />
                         )}
                         {dayEvents.accounts.length > 0 && (
                           <div className="w-1 h-1 rounded-full bg-blue-500" title={`${dayEvents.accounts.length} account(s)`} />

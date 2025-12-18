@@ -49,6 +49,8 @@ interface ImportProgress {
   started_at: string;
   updated_at: string;
   completed_at: string | null;
+  current_order_number: string | null;
+  current_order_date: string | null;
 }
 
 interface ScanResult {
@@ -269,6 +271,12 @@ export function ConnectionStatus({
       case 'fetching_orders':
         return 'Fetching orders from Shopify...';
       case 'processing':
+        if (importProgress.current_order_number) {
+          const orderDate = importProgress.current_order_date 
+            ? format(new Date(importProgress.current_order_date), 'MMM d, yyyy')
+            : '';
+          return `Processing ${importProgress.current_order_number} ${orderDate ? `(${orderDate})` : ''}...`;
+        }
         return `Processing order ${importProgress.orders_processed} of ${importProgress.total_orders}...`;
       case 'completed':
         return isRepairing ? 'Repair complete!' : 'Import complete!';
@@ -343,6 +351,21 @@ export function ConnectionStatus({
                 {getStatusIcon()}
                 <span className="font-medium">{getStatusText()}</span>
               </div>
+              
+              {/* Current Order Display */}
+              {importProgress?.current_order_number && importProgress.status === 'processing' && (
+                <div className="flex items-center gap-3 p-3 bg-background/80 rounded-lg border">
+                  <Package className="h-5 w-5 text-primary animate-pulse" />
+                  <div>
+                    <div className="font-mono font-medium">{importProgress.current_order_number}</div>
+                    {importProgress.current_order_date && (
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(importProgress.current_order_date), 'MMM d, yyyy h:mm a')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               
               {importProgress && importProgress.total_orders > 0 && (
                 <>
