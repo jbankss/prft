@@ -11,6 +11,7 @@ import { ActivityTimeline } from '@/components/accounts/ActivityTimeline';
 import { BalancesView } from '@/components/accounts/BalancesView';
 import { PaymentsView } from '@/components/accounts/PaymentsView';
 import { ImprovedCalendarView } from '@/components/accounts/ImprovedCalendarView';
+import { SnapshotView } from '@/components/accounts/SnapshotView';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { toast } from 'sonner';
 export default function Accounts() {
@@ -108,6 +109,7 @@ export default function Accounts() {
               )
             )}
 
+            {activeView === 'snapshot' && <SnapshotView brandId={currentBrand.id} />}
             {activeView === 'activity' && <ActivityTimeline brandId={currentBrand.id} />}
             {activeView === 'balances' && <BalancesView brandId={currentBrand.id} />}
             {activeView === 'payments' && <PaymentsView brandId={currentBrand.id} />}

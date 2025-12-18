@@ -359,8 +359,11 @@ export type Database = {
           brand_id: string
           created_at: string
           id: string
+          import_from_date: string | null
+          import_status: string | null
           integration_type: string
           is_active: boolean
+          last_import_at: string | null
           shop_domain: string | null
           updated_at: string
           webhook_secret: string | null
@@ -369,8 +372,11 @@ export type Database = {
           brand_id: string
           created_at?: string
           id?: string
+          import_from_date?: string | null
+          import_status?: string | null
           integration_type: string
           is_active?: boolean
+          last_import_at?: string | null
           shop_domain?: string | null
           updated_at?: string
           webhook_secret?: string | null
@@ -379,8 +385,11 @@ export type Database = {
           brand_id?: string
           created_at?: string
           id?: string
+          import_from_date?: string | null
+          import_status?: string | null
           integration_type?: string
           is_active?: boolean
+          last_import_at?: string | null
           shop_domain?: string | null
           updated_at?: string
           webhook_secret?: string | null
@@ -1072,6 +1081,7 @@ export type Database = {
           phone_number: string | null
           role: string
           status: string | null
+          theme_preference: string | null
           title: string | null
           updated_at: string
           work_location: string | null
@@ -1086,6 +1096,7 @@ export type Database = {
           phone_number?: string | null
           role?: string
           status?: string | null
+          theme_preference?: string | null
           title?: string | null
           updated_at?: string
           work_location?: string | null
@@ -1100,6 +1111,7 @@ export type Database = {
           phone_number?: string | null
           role?: string
           status?: string | null
+          theme_preference?: string | null
           title?: string | null
           updated_at?: string
           work_location?: string | null

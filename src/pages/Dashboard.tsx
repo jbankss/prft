@@ -50,11 +50,17 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Bottom Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <TopVendorsLeaderboard vendors={metrics.topVendors} />
-        <SalesChannelBreakdown pos={metrics.salesChannels.pos} online={metrics.salesChannels.online} tiktok={metrics.salesChannels.tiktok} />
-        <RecentOrdersFeed orders={metrics.recentOrders} />
+      {/* Bottom Grid - Equal height cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style={{ gridAutoRows: '1fr' }}>
+        <div className="min-h-[480px]">
+          <TopVendorsLeaderboard vendors={metrics.topVendors} />
+        </div>
+        <div className="min-h-[480px]">
+          <SalesChannelBreakdown pos={metrics.salesChannels.pos} online={metrics.salesChannels.online} tiktok={metrics.salesChannels.tiktok} />
+        </div>
+        <div className="min-h-[480px]">
+          <RecentOrdersFeed orders={metrics.recentOrders} />
+        </div>
       </div>
     </div>;
 }
