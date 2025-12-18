@@ -12,11 +12,10 @@ const corsHeaders = {
 
 // Configuration
 const CHUNK_SIZE = 250; // Orders per chunk
-const BATCH_INSERT_SIZE = 50; // Invoices per batch insert
+const BATCH_INSERT_SIZE = 50; // Orders per batch insert
 const PROGRESS_UPDATE_INTERVAL = 25; // Update progress every N orders
 const SHOPIFY_PAGE_SIZE = 50; // Orders per Shopify API call
 const INTER_PAGE_DELAY_MS = 300; // Delay between Shopify API calls
-const INTER_CHUNK_DELAY_MS = 2000; // Delay between chunks
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -97,23 +96,14 @@ serve(async (req) => {
 
     // REPAIR MODE: Wipe existing data first (only on first chunk)
     if (repair && chunk_number === 1) {
-      console.log(`Repair mode: wiping existing Shopify data for brand ${brand_id}`);
+      console.log(`Repair mode: wiping existing Shopify orders for brand ${brand_id}`);
       
-      const { data: accounts } = await supabase
-        .from('accounts')
-        .select('id')
+      await supabase
+        .from('shopify_orders')
+        .delete()
         .eq('brand_id', brand_id);
       
-      if (accounts && accounts.length > 0) {
-        const accountIds = (accounts as any[]).map((a: any) => a.id);
-        await supabase
-          .from('invoices')
-          .delete()
-          .eq('source', 'shopify')
-          .in('account_id', accountIds);
-      }
-      
-      console.log('Existing Shopify invoices cleared');
+      console.log('Existing Shopify orders cleared');
     }
 
     console.log(`Starting chunk ${chunk_number} import for brand ${brand_id} from ${from_date}`);
@@ -133,7 +123,7 @@ serve(async (req) => {
           status: 'starting',
           total_orders: 0,
           orders_processed: 0,
-          invoices_created: 0,
+          invoices_created: 0, // Now tracks orders created, not invoices
           accounts_created: 0,
           skipped: 0,
           errors: 0,
@@ -232,25 +222,15 @@ async function scanOrders(
   let pageInfo = '';
   const pageSize = 250; // Max for counting
 
-  // Get existing invoice numbers for this brand
-  const { data: accounts } = await supabase
-    .from('accounts')
-    .select('id')
+  // Get existing order line item keys for this brand
+  const { data: existingOrderData } = await supabase
+    .from('shopify_orders')
+    .select('order_number, line_item_id')
     .eq('brand_id', brand_id);
   
-  const accountIds = (accounts as any[] || []).map((a: any) => a.id);
-  
-  let existingSet = new Set<string>();
-  
-  if (accountIds.length > 0) {
-    const { data: existingInvoices } = await supabase
-      .from('invoices')
-      .select('invoice_number')
-      .eq('source', 'shopify')
-      .in('account_id', accountIds);
-    
-    existingSet = new Set((existingInvoices as any[] || []).map((i: any) => i.invoice_number));
-  }
+  const existingSet = new Set<string>(
+    (existingOrderData as any[] || []).map((o: any) => `${o.order_number}-${o.line_item_id}`)
+  );
 
   while (hasNextPage) {
     let url = `https://${shop_domain}/admin/api/2024-01/orders.json?status=any&limit=${pageSize}&created_at_min=${from_date}T00:00:00Z`;
@@ -279,9 +259,9 @@ async function scanOrders(
       
       for (const item of order.line_items || []) {
         if (!item.vendor) continue;
-        const invoiceNumber = `SHOP-${order.order_number}-${item.id}`;
+        const key = `${order.order_number}-${item.id}`;
         
-        if (!existingSet.has(invoiceNumber)) {
+        if (!existingSet.has(key)) {
           orderHasNewItems = true;
           break;
         }
@@ -339,8 +319,7 @@ async function runChunkedImport(
   // Get current progress from database
   let cumulativeProgress = {
     orders_processed: 0,
-    invoices_created: 0,
-    accounts_created: 0,
+    orders_created: 0,
     errors: [] as string[],
     total_orders: 0,
   };
@@ -348,15 +327,14 @@ async function runChunkedImport(
   if (progressId && chunkNumber > 1) {
     const { data: existingProgress } = await supabase
       .from('import_progress')
-      .select('orders_processed, invoices_created, accounts_created, errors, error_details, total_orders')
+      .select('orders_processed, invoices_created, errors, error_details, total_orders')
       .eq('id', progressId)
       .single();
     
     if (existingProgress) {
       cumulativeProgress = {
         orders_processed: existingProgress.orders_processed || 0,
-        invoices_created: existingProgress.invoices_created || 0,
-        accounts_created: existingProgress.accounts_created || 0,
+        orders_created: existingProgress.invoices_created || 0, // Using invoices_created field for orders
         errors: (existingProgress.error_details as string[]) || [],
         total_orders: existingProgress.total_orders || 0,
       };
@@ -374,112 +352,36 @@ async function runChunkedImport(
 
   await updateProgress({ status: 'processing', chunk_number: chunkNumber });
 
-  // Pre-fetch all existing invoice numbers (huge optimization!)
-  console.log('Pre-fetching existing invoice numbers...');
-  const { data: accounts } = await supabase
-    .from('accounts')
-    .select('id')
+  // Pre-fetch all existing order keys (huge optimization!)
+  console.log('Pre-fetching existing orders...');
+  const { data: existingOrderData } = await supabase
+    .from('shopify_orders')
+    .select('order_number, line_item_id')
     .eq('brand_id', brand_id);
   
-  const accountIds = (accounts as any[] || []).map((a: any) => a.id);
-  let existingInvoiceSet = new Set<string>();
-  
-  if (accountIds.length > 0) {
-    const { data: existingInvoices } = await supabase
-      .from('invoices')
-      .select('invoice_number')
-      .eq('source', 'shopify')
-      .in('account_id', accountIds);
-    
-    existingInvoiceSet = new Set((existingInvoices as any[] || []).map((i: any) => i.invoice_number));
-  }
-  console.log(`Found ${existingInvoiceSet.size} existing invoices`);
+  const existingOrderSet = new Set<string>(
+    (existingOrderData as any[] || []).map((o: any) => `${o.order_number}-${o.line_item_id}`)
+  );
+  console.log(`Found ${existingOrderSet.size} existing order line items`);
 
-  // Account cache for smart matching
-  const accountCache: Map<string, string> = new Map();
-  
-  // Pre-load all existing accounts for this brand
-  const { data: allAccounts } = await supabase
-    .from('accounts')
-    .select('id, account_name')
-    .eq('brand_id', brand_id);
-  
-  for (const acc of (allAccounts as any[]) || []) {
-    accountCache.set(acc.account_name.trim().toLowerCase(), acc.id);
-  }
-  console.log(`Pre-loaded ${accountCache.size} accounts`);
-
-  let newAccountsCreated = 0;
-
-  const findOrCreateAccount = async (vendor: string): Promise<string | null> => {
-    const normalizedVendor = vendor.trim().toLowerCase();
-    
-    if (accountCache.has(normalizedVendor)) {
-      return accountCache.get(normalizedVendor)!;
-    }
-
-    // Try fuzzy match from cache
-    for (const [cachedName, accountId] of accountCache.entries()) {
-      if (cachedName.includes(normalizedVendor) || normalizedVendor.includes(cachedName)) {
-        accountCache.set(normalizedVendor, accountId);
-        return accountId;
-      }
-    }
-
-    // Create new account
-    const { data: newAccount, error: createError } = await supabase
-      .from('accounts')
-      .insert({
-        account_name: vendor.trim(),
-        brand_id: brand_id,
-        balance: 0,
-        status: 'active',
-        notes: `Auto-created from Shopify import on ${new Date().toISOString().split('T')[0]}`
-      })
-      .select()
-      .single();
-
-    if (createError) {
-      console.error(`Failed to create account for ${vendor}:`, createError);
-      
-      // Self-healing: check if it was created by another process
-      const { data: retryAccounts } = await supabase
-        .from('accounts')
-        .select('id')
-        .eq('brand_id', brand_id)
-        .ilike('account_name', vendor.trim())
-        .limit(1);
-
-      if (retryAccounts && retryAccounts.length > 0) {
-        accountCache.set(normalizedVendor, (retryAccounts as any[])[0].id);
-        return (retryAccounts as any[])[0].id;
-      }
-      
-      return null;
-    }
-
-    accountCache.set(normalizedVendor, (newAccount as any).id);
-    newAccountsCreated++;
-    return (newAccount as any).id;
-  };
+  let ordersCreatedInChunk = 0;
+  let errorsInChunk: string[] = [];
+  let nextCursor: string | null = null;
 
   let hasNextPage = true;
   let pageInfo = startCursor || '';
   let totalOrdersFetched = cumulativeProgress.total_orders;
-  let invoicesCreatedInChunk = 0;
-  let errorsInChunk: string[] = [];
-  let nextCursor: string | null = null;
 
   // Batch insert buffer
-  let invoiceBatch: any[] = [];
+  let orderBatch: any[] = [];
 
-  const flushInvoiceBatch = async () => {
-    if (invoiceBatch.length === 0) return;
+  const flushOrderBatch = async () => {
+    if (orderBatch.length === 0) return;
     
     const { error: batchError } = await supabase
-      .from('invoices')
-      .upsert(invoiceBatch, {
-        onConflict: 'invoice_number',
+      .from('shopify_orders')
+      .upsert(orderBatch, {
+        onConflict: 'brand_id,order_number,line_item_id',
         ignoreDuplicates: true
       });
 
@@ -487,10 +389,10 @@ async function runChunkedImport(
       console.error('Batch insert error:', batchError);
       errorsInChunk.push(`Batch insert failed: ${batchError.message}`);
     } else {
-      invoicesCreatedInChunk += invoiceBatch.length;
+      ordersCreatedInChunk += orderBatch.length;
     }
     
-    invoiceBatch = [];
+    orderBatch = [];
   };
 
   try {
@@ -538,48 +440,59 @@ async function runChunkedImport(
 
         try {
           const orderStartMs = Date.now();
-          const orderDate = order.created_at.split('T')[0];
+          
+          // Determine source from sales channel
+          let source = 'online';
+          if (order.source_name === 'pos' || order.source_name === 'shopify_pos') {
+            source = 'pos';
+          } else if (order.source_name?.toLowerCase().includes('tiktok')) {
+            source = 'tiktok';
+          }
           
           for (const item of order.line_items || []) {
             const vendor = item.vendor;
             if (!vendor) continue;
 
-            const invoiceNumber = `SHOP-${order.order_number}-${item.id}`;
+            const key = `${order.order_number}-${item.id}`;
 
             // Skip if already exists (using pre-fetched set - very fast!)
-            if (existingInvoiceSet.has(invoiceNumber)) {
+            if (existingOrderSet.has(key)) {
               continue;
             }
 
-            const accountId = await findOrCreateAccount(vendor);
-
-            if (!accountId) {
-              errorsInChunk.push(`Order ${order.order_number}: Failed to find/create account for "${vendor}"`);
-              continue;
-            }
-
-            const amount = parseFloat(item.pre_tax_price || String(item.price * item.quantity));
+            const amount = parseFloat(item.pre_tax_price || String(parseFloat(item.price) * item.quantity));
             
-            // Add to batch
-            invoiceBatch.push({
-              account_id: accountId,
-              invoice_number: invoiceNumber,
-              amount: amount,
-              status: order.financial_status === 'paid' ? 'paid' : 'pending',
-              paid_date: order.financial_status === 'paid' ? orderDate : null,
-              due_date: orderDate,
+            // Add to batch - this is REVENUE data
+            orderBatch.push({
+              brand_id: brand_id,
               shopify_order_id: order.id.toString(),
-              source: 'shopify',
-              notes: `${vendor}, Qty: ${item.quantity}, Product: ${item.name}`,
-              created_at: order.created_at,
+              order_number: order.order_number.toString(),
+              order_date: order.created_at,
+              customer_name: order.customer?.first_name 
+                ? `${order.customer.first_name} ${order.customer.last_name || ''}`.trim()
+                : 'Guest',
+              customer_email: order.customer?.email || null,
+              vendor: vendor,
+              product_name: item.name,
+              line_item_id: item.id.toString(),
+              quantity: item.quantity,
+              unit_price: parseFloat(item.price),
+              total_amount: amount,
+              source: source,
+              status: order.financial_status === 'paid' ? 'completed' : 'pending',
+              raw_data: { 
+                order_name: order.name,
+                fulfillment_status: order.fulfillment_status,
+                financial_status: order.financial_status
+              },
             });
 
             // Add to existing set to prevent duplicates within this import
-            existingInvoiceSet.add(invoiceNumber);
+            existingOrderSet.add(key);
 
             // Flush batch if full
-            if (invoiceBatch.length >= BATCH_INSERT_SIZE) {
-              await flushInvoiceBatch();
+            if (orderBatch.length >= BATCH_INSERT_SIZE) {
+              await flushOrderBatch();
             }
           }
 
@@ -594,7 +507,7 @@ async function runChunkedImport(
               : 100;
             
             const remainingOrders = expectedNewOrders > 0 
-              ? expectedNewOrders - (cumulativeProgress.invoices_created + invoicesCreatedInChunk + invoiceBatch.length)
+              ? expectedNewOrders - (cumulativeProgress.orders_created + ordersCreatedInChunk + orderBatch.length)
               : 0;
             
             const estimatedRemainingMs = remainingOrders * avgOrderTime;
@@ -604,8 +517,8 @@ async function runChunkedImport(
               status: 'processing',
               total_orders: totalOrdersFetched,
               orders_processed: cumulativeProgress.orders_processed + ordersInChunk,
-              invoices_created: cumulativeProgress.invoices_created + invoicesCreatedInChunk + invoiceBatch.length,
-              accounts_created: cumulativeProgress.accounts_created + newAccountsCreated,
+              invoices_created: cumulativeProgress.orders_created + ordersCreatedInChunk + orderBatch.length, // orders created
+              accounts_created: 0, // No accounts created from Shopify imports
               errors: cumulativeProgress.errors.length + errorsInChunk.length,
               error_details: [...cumulativeProgress.errors, ...errorsInChunk].slice(-20),
               current_order_number: `#${order.order_number}`,
@@ -644,7 +557,7 @@ async function runChunkedImport(
     }
 
     // Flush remaining batch
-    await flushInvoiceBatch();
+    await flushOrderBatch();
 
   } catch (err) {
     console.error('Import chunk error:', err);
@@ -669,8 +582,8 @@ async function runChunkedImport(
     status: finalStatus,
     total_orders: totalOrdersFetched,
     orders_processed: cumulativeProgress.orders_processed + ordersInChunk,
-    invoices_created: cumulativeProgress.invoices_created + invoicesCreatedInChunk,
-    accounts_created: cumulativeProgress.accounts_created + newAccountsCreated,
+    invoices_created: cumulativeProgress.orders_created + ordersCreatedInChunk, // orders created
+    accounts_created: 0,
     errors: allErrors.length,
     error_details: allErrors.slice(-20),
     page_cursor: nextCursor,
@@ -695,21 +608,20 @@ async function runChunkedImport(
       integration_type: 'shopify',
       event_type: 'historical_import',
       status: allErrors.length > 0 ? 'completed_with_errors' : 'success',
-      response_summary: `Imported ${cumulativeProgress.orders_processed + ordersInChunk} orders, ${cumulativeProgress.invoices_created + invoicesCreatedInChunk} invoices, ${cumulativeProgress.accounts_created + newAccountsCreated} new accounts in ${chunkNumber} chunks`,
-      invoices_created: cumulativeProgress.invoices_created + invoicesCreatedInChunk,
-      accounts_created: cumulativeProgress.accounts_created + newAccountsCreated,
+      response_summary: `Imported ${cumulativeProgress.orders_processed + ordersInChunk} orders in ${chunkNumber} chunks`,
+      invoices_created: 0,
+      accounts_created: 0,
     });
   }
 
   const chunkDuration = (Date.now() - chunkStartTime) / 1000;
-  console.log(`Chunk ${chunkNumber} complete in ${chunkDuration.toFixed(1)}s: ${ordersInChunk} orders, ${invoicesCreatedInChunk} invoices. Status: ${finalStatus}`);
+  console.log(`Chunk ${chunkNumber} complete in ${chunkDuration.toFixed(1)}s: ${ordersInChunk} orders, ${ordersCreatedInChunk} line items. Status: ${finalStatus}`);
 
   return {
     success: true,
     chunk_number: chunkNumber,
     orders_in_chunk: ordersInChunk,
-    invoices_created: invoicesCreatedInChunk,
-    accounts_created: newAccountsCreated,
+    orders_created: ordersCreatedInChunk,
     needs_continuation: needsMoreChunks,
     next_cursor: nextCursor,
     progress_id: progressId,

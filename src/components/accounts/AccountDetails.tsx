@@ -8,7 +8,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, FileText, ShoppingCart, DollarSign, Package } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Send, FileText, DollarSign, Package, Edit2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { InvoicesList } from './InvoicesList';
 import { ChargesList } from './ChargesList';
@@ -27,6 +28,12 @@ export function AccountDetails({
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Balance editing state
+  const [editingBalance, setEditingBalance] = useState(false);
+  const [newBalance, setNewBalance] = useState('');
+  const [newBalanceNotes, setNewBalanceNotes] = useState('');
+  const [savingBalance, setSavingBalance] = useState(false);
 
   useEffect(() => {
     if (!accountId) return;
@@ -38,6 +45,10 @@ export function AccountDetails({
         .eq('id', accountId)
         .single();
       setAccount(data);
+      if (data) {
+        setNewBalance(String(data.manual_balance || 0));
+        setNewBalanceNotes(data.balance_notes || '');
+      }
     };
 
     const fetchMessages = async () => {
@@ -59,7 +70,6 @@ export function AccountDetails({
         { event: '*', schema: 'public', table: 'chat_messages', filter: `account_id=eq.${accountId}` },
         async (payload) => {
           if (payload.eventType === 'INSERT') {
-            // Fetch the full message with profile data
             const { data } = await supabase
               .from('chat_messages')
               .select('*, profiles(*)')
@@ -108,6 +118,31 @@ export function AccountDetails({
     }
   };
 
+  const saveBalance = async () => {
+    if (!accountId) return;
+    
+    setSavingBalance(true);
+    try {
+      const { error } = await supabase
+        .from('accounts')
+        .update({
+          manual_balance: parseFloat(newBalance) || 0,
+          balance_notes: newBalanceNotes || null,
+        })
+        .eq('id', accountId);
+
+      if (error) throw error;
+
+      toast.success('Balance updated');
+      setEditingBalance(false);
+      onRefresh();
+    } catch (error: any) {
+      toast.error('Failed to update balance');
+    } finally {
+      setSavingBalance(false);
+    }
+  };
+
   if (!accountId) return null;
 
   return (
@@ -149,14 +184,6 @@ export function AccountDetails({
             >
               <DollarSign className="h-5 w-5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-lg"
-              onClick={() => document.getElementById('tab-invoices')?.click()}
-            >
-              <ShoppingCart className="h-5 w-5" />
-            </Button>
           </div>
 
           {/* Content Area */}
@@ -175,17 +202,13 @@ export function AccountDetails({
                     <Card>
                       <CardHeader>
                         <CardTitle>Account Information</CardTitle>
-                        <CardDescription>Basic account details and status</CardDescription>
+                        <CardDescription>Vendor account details and balance</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p className="text-sm text-muted-foreground">Status</p>
                             <p className="font-medium capitalize">{account?.status || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Balance</p>
-                            <p className="font-medium">${Number(account?.balance || 0).toFixed(2)}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Created</p>
@@ -198,6 +221,88 @@ export function AccountDetails({
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">Notes</p>
                             <p className="text-sm">{account.notes}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Amount Owed Card - Editable */}
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                          <CardTitle>Amount Owed</CardTitle>
+                          <CardDescription>
+                            How much you owe this vendor for inventory (counts against P&L)
+                          </CardDescription>
+                        </div>
+                        {!editingBalance && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingBalance(true)}
+                          >
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        {editingBalance ? (
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="manual_balance">Amount Owed ($)</Label>
+                              <Input
+                                id="manual_balance"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={newBalance}
+                                onChange={(e) => setNewBalance(e.target.value)}
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="balance_notes">Notes</Label>
+                              <Input
+                                id="balance_notes"
+                                value={newBalanceNotes}
+                                onChange={(e) => setNewBalanceNotes(e.target.value)}
+                                placeholder="e.g., PO #12345, Due on 12/30"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button 
+                                onClick={saveBalance} 
+                                disabled={savingBalance}
+                                size="sm"
+                              >
+                                <Check className="h-4 w-4 mr-2" />
+                                Save
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingBalance(false);
+                                  setNewBalance(String(account?.manual_balance || 0));
+                                  setNewBalanceNotes(account?.balance_notes || '');
+                                }}
+                              >
+                                <X className="h-4 w-4 mr-2" />
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-3xl font-bold text-destructive">
+                              ${Number(account?.manual_balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </p>
+                            {account?.balance_notes && (
+                              <p className="text-sm text-muted-foreground mt-2">
+                                {account.balance_notes}
+                              </p>
+                            )}
                           </div>
                         )}
                       </CardContent>

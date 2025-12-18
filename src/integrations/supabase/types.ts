@@ -18,10 +18,12 @@ export type Database = {
         Row: {
           account_name: string
           balance: number
+          balance_notes: string | null
           brand_id: string
           created_at: string
           created_by: string | null
           id: string
+          manual_balance: number | null
           notes: string | null
           status: string
           updated_at: string
@@ -29,10 +31,12 @@ export type Database = {
         Insert: {
           account_name: string
           balance?: number
+          balance_notes?: string | null
           brand_id: string
           created_at?: string
           created_by?: string | null
           id?: string
+          manual_balance?: number | null
           notes?: string | null
           status?: string
           updated_at?: string
@@ -40,10 +44,12 @@ export type Database = {
         Update: {
           account_name?: string
           balance?: number
+          balance_notes?: string | null
           brand_id?: string
           created_at?: string
           created_by?: string | null
           id?: string
+          manual_balance?: number | null
           notes?: string | null
           status?: string
           updated_at?: string
@@ -1203,6 +1209,77 @@ export type Database = {
           {
             foreignKeyName: "profiles_current_brand_id_fkey"
             columns: ["current_brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopify_orders: {
+        Row: {
+          brand_id: string
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          id: string
+          line_item_id: string
+          order_date: string
+          order_number: string
+          product_name: string | null
+          quantity: number
+          raw_data: Json | null
+          shopify_order_id: string
+          source: string
+          status: string
+          total_amount: number
+          unit_price: number
+          updated_at: string
+          vendor: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          id?: string
+          line_item_id: string
+          order_date: string
+          order_number: string
+          product_name?: string | null
+          quantity?: number
+          raw_data?: Json | null
+          shopify_order_id: string
+          source?: string
+          status?: string
+          total_amount?: number
+          unit_price?: number
+          updated_at?: string
+          vendor: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          id?: string
+          line_item_id?: string
+          order_date?: string
+          order_number?: string
+          product_name?: string | null
+          quantity?: number
+          raw_data?: Json | null
+          shopify_order_id?: string
+          source?: string
+          status?: string
+          total_amount?: number
+          unit_price?: number
+          updated_at?: string
+          vendor?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopify_orders_brand_id_fkey"
+            columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
             referencedColumns: ["id"]
