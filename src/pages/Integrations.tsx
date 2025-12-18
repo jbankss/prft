@@ -11,7 +11,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { format } from 'date-fns';
 import { ShopifySetupWizard } from '@/components/integrations/ShopifySetupWizard';
 import { ConnectionStatus } from '@/components/integrations/ConnectionStatus';
-import { SystemAssistant } from '@/components/integrations/SystemAssistant';
 
 type WebhookLog = {
   id: string;
@@ -183,22 +182,12 @@ export default function Integrations() {
               onComplete={handleSetupComplete}
             />
           ) : (
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <ConnectionStatus
-                  brandId={currentBrand.id}
-                  shopDomain={shopDomain}
-                  lastSuccessfulWebhook={lastSuccessfulWebhook}
-                  onReconfigure={handleReconfigure}
-                />
-              </div>
-              <div>
-                <SystemAssistant 
-                  brandName={currentBrand.name}
-                  currentPage="Integrations"
-                />
-              </div>
-            </div>
+            <ConnectionStatus
+              brandId={currentBrand.id}
+              shopDomain={shopDomain}
+              lastSuccessfulWebhook={lastSuccessfulWebhook}
+              onReconfigure={handleReconfigure}
+            />
           )}
         </TabsContent>
 

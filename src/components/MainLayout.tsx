@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { TopNav } from '@/components/TopNav';
 import { PendingApproval } from './PendingApproval';
+import { FloatingAssistant } from '@/components/global/FloatingAssistant';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -35,6 +36,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <main className="p-6">
         {children}
       </main>
+      <FloatingAssistant />
     </div>
   );
 }
