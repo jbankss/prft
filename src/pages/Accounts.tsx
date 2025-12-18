@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, TrendingUp } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Plus, Search } from 'lucide-react';
 import { AccountsList } from '@/components/accounts/AccountsList';
 import { AccountDialog } from '@/components/accounts/AccountDialog';
 import { AccountsSidebar } from '@/components/accounts/AccountsSidebar';
@@ -14,24 +15,24 @@ import { ImprovedCalendarView } from '@/components/accounts/ImprovedCalendarView
 import { SnapshotView } from '@/components/accounts/SnapshotView';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { toast } from 'sonner';
+
 export default function Accounts() {
-  const {
-    currentBrand
-  } = useBrandContext();
+  const { currentBrand } = useBrandContext();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAccountDialog, setShowAccountDialog] = useState(false);
   const [activeView, setActiveView] = useState('overview');
+  const [searchQuery, setSearchQuery] = useState('');
+
   const fetchData = async () => {
     if (!currentBrand?.id) return;
     try {
       setLoading(true);
-      const {
-        data,
-        error
-      } = await supabase.from('accounts').select('*, brands(*), charges(*), invoices(*)').eq('brand_id', currentBrand.id).order('created_at', {
-        ascending: false
-      });
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('*, brands(*), charges(*), invoices(*)')
+        .eq('brand_id', currentBrand.id)
+        .order('created_at', { ascending: false });
       if (error) throw error;
       setAccounts(data || []);
     } catch (error: any) {
@@ -40,30 +41,43 @@ export default function Accounts() {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchData();
-    const accountsChannel = supabase.channel('accounts-changes').on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'accounts'
-    }, fetchData).subscribe();
+    const accountsChannel = supabase
+      .channel('accounts-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, fetchData)
+      .subscribe();
     return () => {
       supabase.removeChannel(accountsChannel);
     };
   }, [currentBrand?.id]);
+
+  // Filter accounts by search query
+  const filteredAccounts = accounts.filter((account) =>
+    account.account_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (!currentBrand) {
-    return <div className="flex items-center justify-center h-96">
+    return (
+      <div className="flex items-center justify-center h-96">
         <div className="text-center space-y-4">
           <p className="text-muted-foreground">Select a brand from the top-right to view Brand Headquarters</p>
         </div>
-      </div>;
+      </div>
+    );
   }
+
   if (loading) {
-    return <div className="flex items-center justify-center h-96">
+    return (
+      <div className="flex items-center justify-center h-96">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="h-full flex flex-col">
+
+  return (
+    <div className="h-full flex flex-col">
       {/* Header */}
       <div className="border-b border-border/50 bg-card">
         <div className="px-8 py-8">
@@ -82,30 +96,52 @@ export default function Accounts() {
         <div className="flex-1 overflow-auto p-8">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Action Bar */}
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-4">
               <h2 className="text-2xl font-semibold capitalize">{activeView}</h2>
               {activeView === 'overview' && (
-                <Button onClick={() => setShowAccountDialog(true)} className="hover-lift">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Account
-                </Button>
+                <div className="flex items-center gap-3 flex-1 max-w-md ml-auto">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search accounts..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Button onClick={() => setShowAccountDialog(true)} className="hover-lift">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Account
+                  </Button>
+                </div>
               )}
             </div>
 
+            {/* Search Results Count */}
+            {activeView === 'overview' && searchQuery && (
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredAccounts.length} of {accounts.length} accounts
+              </p>
+            )}
+
             {/* View Content */}
             {activeView === 'overview' && (
-              accounts.length === 0 ? (
+              filteredAccounts.length === 0 ? (
                 <Card className="p-12 animated-gradient text-center border-border/40">
                   <p className="text-muted-foreground mb-4">
-                    No accounts yet. Create your first account for {currentBrand.name}.
+                    {searchQuery
+                      ? `No accounts matching "${searchQuery}"`
+                      : `No accounts yet. Create your first account for ${currentBrand.name}.`}
                   </p>
-                  <Button onClick={() => setShowAccountDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Account
-                  </Button>
+                  {!searchQuery && (
+                    <Button onClick={() => setShowAccountDialog(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Account
+                    </Button>
+                  )}
                 </Card>
               ) : (
-                <AccountsList accounts={accounts} brands={[currentBrand]} onRefresh={fetchData} />
+                <AccountsList accounts={filteredAccounts} brands={[currentBrand]} onRefresh={fetchData} />
               )
             )}
 
@@ -128,6 +164,12 @@ export default function Accounts() {
         )}
       </div>
 
-      <AccountDialog open={showAccountDialog} onOpenChange={setShowAccountDialog} brands={[currentBrand]} onSuccess={fetchData} />
-    </div>;
+      <AccountDialog
+        open={showAccountDialog}
+        onOpenChange={setShowAccountDialog}
+        brands={[currentBrand]}
+        onSuccess={fetchData}
+      />
+    </div>
+  );
 }

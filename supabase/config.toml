@@ -23,3 +23,6 @@ verify_jwt = true
 
 [functions.system-assistant]
 verify_jwt = true
+
+[functions.extract-invoice-total]
+verify_jwt = true
