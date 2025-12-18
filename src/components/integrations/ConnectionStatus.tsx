@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { 
@@ -21,7 +22,9 @@ import {
   Package,
   Users,
   FileText,
-  XCircle
+  Search,
+  Trash2,
+  Wrench
 } from 'lucide-react';
 import { format, subDays, startOfYear } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -48,6 +51,12 @@ interface ImportProgress {
   completed_at: string | null;
 }
 
+interface ScanResult {
+  total_orders: number;
+  new_orders: number;
+  existing_orders: number;
+}
+
 type DatePreset = 'last30' | 'last90' | 'ytd' | 'custom';
 
 export function ConnectionStatus({ 
@@ -56,14 +65,17 @@ export function ConnectionStatus({
   lastSuccessfulWebhook,
   onReconfigure 
 }: ConnectionStatusProps) {
+  const [isScanning, setIsScanning] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isRepairing, setIsRepairing] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<DatePreset>('last30');
   const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
 
   // Subscribe to real-time progress updates
   useEffect(() => {
-    if (!brandId || !isImporting) return;
+    if (!brandId) return;
 
     const channel = supabase
       .channel('import-progress')
@@ -82,8 +94,10 @@ export function ConnectionStatus({
             
             if (progress.status === 'completed' || progress.status === 'completed_with_errors') {
               setIsImporting(false);
+              setIsRepairing(false);
+              setScanResult(null); // Reset scan after import
               if (progress.status === 'completed') {
-                toast.success(`Import complete: ${progress.invoices_created} invoices, ${progress.accounts_created} accounts created`);
+                toast.success(`Import complete: ${progress.invoices_created} invoices, ${progress.accounts_created} new accounts`);
               } else {
                 toast.warning(`Import completed with ${progress.errors} errors`);
               }
@@ -96,7 +110,7 @@ export function ConnectionStatus({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [brandId, isImporting]);
+  }, [brandId]);
 
   const getFromDate = (): Date => {
     const today = new Date();
@@ -114,6 +128,46 @@ export function ConnectionStatus({
     }
   };
 
+  const handleScanOrders = async () => {
+    setIsScanning(true);
+    setScanResult(null);
+
+    try {
+      const fromDate = getFromDate();
+      
+      const { data, error } = await supabase.functions.invoke('import-shopify-orders', {
+        body: { 
+          brand_id: brandId,
+          from_date: format(fromDate, 'yyyy-MM-dd'),
+          mode: 'scan'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setScanResult({
+          total_orders: data.total_orders,
+          new_orders: data.new_orders,
+          existing_orders: data.existing_orders
+        });
+        
+        if (data.new_orders === 0) {
+          toast.info('All orders in this date range are already imported');
+        } else {
+          toast.success(`Found ${data.new_orders} new orders to import`);
+        }
+      } else {
+        toast.error(data.error || 'Scan failed');
+      }
+    } catch (error) {
+      console.error('Error scanning orders:', error);
+      toast.error('Failed to scan orders');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   const handleImportOrders = async () => {
     setIsImporting(true);
     setImportProgress(null);
@@ -124,23 +178,55 @@ export function ConnectionStatus({
       const { data, error } = await supabase.functions.invoke('import-shopify-orders', {
         body: { 
           brand_id: brandId,
-          from_date: format(fromDate, 'yyyy-MM-dd')
+          from_date: format(fromDate, 'yyyy-MM-dd'),
+          mode: 'import'
         }
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      // Function completed (may have updated progress already)
-      if (!data.success) {
+      if (!data.success && !data.progress_id) {
         toast.error(data.error || 'Import failed');
         setIsImporting(false);
+      } else {
+        toast.info('Import started in background. You can leave this page.');
       }
     } catch (error) {
       console.error('Error importing orders:', error);
-      toast.error('Failed to import orders');
+      toast.error('Failed to start import');
       setIsImporting(false);
+    }
+  };
+
+  const handleRepairOrders = async () => {
+    setIsRepairing(true);
+    setImportProgress(null);
+    setScanResult(null);
+
+    try {
+      const fromDate = getFromDate();
+      
+      const { data, error } = await supabase.functions.invoke('import-shopify-orders', {
+        body: { 
+          brand_id: brandId,
+          from_date: format(fromDate, 'yyyy-MM-dd'),
+          mode: 'import',
+          repair: true
+        }
+      });
+
+      if (error) throw error;
+
+      if (!data.success && !data.progress_id) {
+        toast.error(data.error || 'Repair failed');
+        setIsRepairing(false);
+      } else {
+        toast.info('Repair started. Existing Shopify data will be cleared and re-imported.');
+      }
+    } catch (error) {
+      console.error('Error repairing orders:', error);
+      toast.error('Failed to start repair');
+      setIsRepairing(false);
     }
   };
 
@@ -175,23 +261,25 @@ export function ConnectionStatus({
   };
 
   const getStatusText = () => {
-    if (!importProgress) return 'Starting import...';
+    if (!importProgress) return isRepairing ? 'Clearing existing data...' : 'Starting import...';
     
     switch (importProgress.status) {
       case 'starting':
-        return 'Initializing...';
+        return isRepairing ? 'Preparing repair...' : 'Initializing...';
       case 'fetching_orders':
         return 'Fetching orders from Shopify...';
       case 'processing':
         return `Processing order ${importProgress.orders_processed} of ${importProgress.total_orders}...`;
       case 'completed':
-        return 'Import complete!';
+        return isRepairing ? 'Repair complete!' : 'Import complete!';
       case 'completed_with_errors':
         return `Completed with ${importProgress.errors} errors`;
       default:
         return 'Processing...';
     }
   };
+
+  const isProcessing = isImporting || isRepairing;
 
   return (
     <div className="space-y-6">
@@ -244,12 +332,12 @@ export function ConnectionStatus({
             Import Historical Orders
           </CardTitle>
           <CardDescription>
-            Pull past orders from your Shopify store. Duplicates are automatically skipped.
+            Scan and import past orders from your Shopify store. The import runs in the background.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Real-time Progress Display */}
-          {isImporting && (
+          {isProcessing && (
             <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-4">
               <div className="flex items-center gap-2">
                 {getStatusIcon()}
@@ -260,7 +348,7 @@ export function ConnectionStatus({
                 <>
                   <Progress value={getProgressPercent()} className="h-2" />
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div className="grid grid-cols-3 gap-3 text-sm">
                     <div className="flex items-center gap-2 p-2 bg-background rounded">
                       <Package className="h-4 w-4 text-blue-500" />
                       <div>
@@ -279,14 +367,7 @@ export function ConnectionStatus({
                       <Users className="h-4 w-4 text-purple-500" />
                       <div>
                         <div className="font-medium">{importProgress.accounts_created}</div>
-                        <div className="text-xs text-muted-foreground">Accounts</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-2 bg-background rounded">
-                      <XCircle className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <div className="font-medium">{importProgress.skipped}</div>
-                        <div className="text-xs text-muted-foreground">Skipped</div>
+                        <div className="text-xs text-muted-foreground">New Accounts</div>
                       </div>
                     </div>
                   </div>
@@ -298,22 +379,26 @@ export function ConnectionStatus({
                         {importProgress.errors} errors
                       </div>
                       <div className="text-xs text-muted-foreground max-h-20 overflow-y-auto">
-                        {importProgress.error_details.slice(0, 3).map((err, i) => (
+                        {(importProgress.error_details as unknown as string[]).slice(0, 3).map((err, i) => (
                           <div key={i}>{err}</div>
                         ))}
-                        {importProgress.error_details.length > 3 && (
-                          <div>...and {importProgress.error_details.length - 3} more</div>
+                        {(importProgress.error_details as unknown as string[]).length > 3 && (
+                          <div>...and {(importProgress.error_details as unknown as string[]).length - 3} more</div>
                         )}
                       </div>
                     </div>
                   )}
                 </>
               )}
+              
+              <p className="text-xs text-muted-foreground">
+                You can leave this page. The import will continue in the background.
+              </p>
             </div>
           )}
 
           {/* Date Presets - hide during import */}
-          {!isImporting && (
+          {!isProcessing && (
             <>
               <div className="flex flex-wrap gap-2">
                 {presets.map((preset) => (
@@ -321,7 +406,10 @@ export function ConnectionStatus({
                     key={preset.value}
                     variant={selectedPreset === preset.value ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setSelectedPreset(preset.value as DatePreset)}
+                    onClick={() => {
+                      setSelectedPreset(preset.value as DatePreset);
+                      setScanResult(null); // Reset scan when date changes
+                    }}
                   >
                     {preset.label}
                   </Button>
@@ -347,7 +435,10 @@ export function ConnectionStatus({
                     <Calendar
                       mode="single"
                       selected={customDate}
-                      onSelect={setCustomDate}
+                      onSelect={(date) => {
+                        setCustomDate(date);
+                        setScanResult(null); // Reset scan when date changes
+                      }}
                       initialFocus
                       disabled={(date) => date > new Date()}
                     />
@@ -358,35 +449,125 @@ export function ConnectionStatus({
               {/* Import Summary */}
               <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  Will import orders from{' '}
+                  Date range:{' '}
                   <strong className="text-foreground">
                     {format(getFromDate(), 'MMM d, yyyy')}
                   </strong>{' '}
                   to today
                 </p>
               </div>
+
+              {/* Scan Results */}
+              {scanResult && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2 font-medium text-blue-700 dark:text-blue-300">
+                    <Search className="h-4 w-4" />
+                    Scan Results
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div className="text-center p-2 bg-background rounded">
+                      <div className="font-bold text-lg">{scanResult.total_orders}</div>
+                      <div className="text-xs text-muted-foreground">Total Orders</div>
+                    </div>
+                    <div className="text-center p-2 bg-green-100 dark:bg-green-900/30 rounded">
+                      <div className="font-bold text-lg text-green-600 dark:text-green-400">{scanResult.new_orders}</div>
+                      <div className="text-xs text-muted-foreground">New Orders</div>
+                    </div>
+                    <div className="text-center p-2 bg-background rounded">
+                      <div className="font-bold text-lg">{scanResult.existing_orders}</div>
+                      <div className="text-xs text-muted-foreground">Already Imported</div>
+                    </div>
+                  </div>
+                  {scanResult.new_orders > 0 && (
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      Click "Import Orders" to import {scanResult.new_orders} new orders.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline"
+                  className="flex-1" 
+                  onClick={handleScanOrders}
+                  disabled={isScanning || (selectedPreset === 'custom' && !customDate)}
+                >
+                  {isScanning ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Scanning...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4 mr-2" />
+                      Scan Orders
+                    </>
+                  )}
+                </Button>
+                
+                <Button 
+                  className="flex-1" 
+                  onClick={handleImportOrders}
+                  disabled={isScanning || (selectedPreset === 'custom' && !customDate) || (scanResult && scanResult.new_orders === 0)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Import Orders
+                </Button>
+              </div>
             </>
           )}
+        </CardContent>
+      </Card>
 
-          {/* Import Button */}
-          <Button 
-            className="w-full" 
-            size="lg"
-            onClick={handleImportOrders}
-            disabled={isImporting || (selectedPreset === 'custom' && !customDate)}
-          >
-            {isImporting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Importing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Import Orders
-              </>
-            )}
-          </Button>
+      {/* Repair Orders Card */}
+      <Card className="border-amber-200 dark:border-amber-900">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+            <Wrench className="h-5 w-5" />
+            Repair Orders
+          </CardTitle>
+          <CardDescription>
+            Clear all Shopify-imported data and re-import from scratch. Use this to fix data inconsistencies.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950"
+                disabled={isProcessing}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Repair Orders
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Repair Orders?</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2">
+                  <p>This will:</p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>Delete all Shopify-imported invoices for this brand</li>
+                    <li>Re-import orders from {format(getFromDate(), 'MMM d, yyyy')} to today</li>
+                    <li>Correctly map all order dates and data</li>
+                  </ul>
+                  <p className="font-medium mt-3">This cannot be undone. Make sure to backup your data first if needed.</p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleRepairOrders}
+                  className="bg-amber-600 hover:bg-amber-700"
+                >
+                  Yes, Repair Orders
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </div>
