@@ -12,11 +12,12 @@ serve(async (req) => {
   }
 
   try {
-    const { brand_id, from_date, access_token, shop_domain } = await req.json();
+    const { brand_id, from_date } = await req.json();
     
-    if (!brand_id || !from_date || !access_token || !shop_domain) {
+    if (!brand_id || !from_date) {
       return new Response(JSON.stringify({ 
-        error: 'Missing required parameters: brand_id, from_date, access_token, shop_domain' 
+        success: false,
+        error: 'Missing required parameters: brand_id, from_date' 
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -26,6 +27,37 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch the integration config to get the stored API token
+    const { data: integration, error: integrationError } = await supabase
+      .from('brand_integrations')
+      .select('api_access_token, shop_domain')
+      .eq('brand_id', brand_id)
+      .eq('integration_type', 'shopify')
+      .single();
+
+    if (integrationError || !integration) {
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Shopify integration not configured. Please complete the setup wizard first.' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!integration.api_access_token || !integration.shop_domain) {
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'API access token or shop domain not configured. Please reconfigure the integration.' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const access_token = integration.api_access_token;
+    const shop_domain = integration.shop_domain;
 
     console.log(`Starting historical import for brand ${brand_id} from ${from_date}`);
 
@@ -40,9 +72,10 @@ serve(async (req) => {
       .eq('integration_type', 'shopify');
 
     const results = {
-      ordersProcessed: 0,
-      invoicesCreated: 0,
-      accountsCreated: 0,
+      success: true,
+      orders_processed: 0,
+      invoices_created: 0,
+      accounts_created: 0,
       skipped: 0,
       errors: [] as string[],
     };
@@ -127,7 +160,7 @@ serve(async (req) => {
                   continue;
                 }
                 account = newAccount;
-                results.accountsCreated++;
+                results.accounts_created++;
               }
 
               if (!account) continue;
@@ -152,11 +185,11 @@ serve(async (req) => {
                 console.error(`Failed to create invoice:`, insertError);
                 results.errors.push(`Order ${order.order_number}: ${insertError.message}`);
               } else {
-                results.invoicesCreated++;
+                results.invoices_created++;
               }
             }
 
-            results.ordersProcessed++;
+            results.orders_processed++;
           } catch (err) {
             console.error(`Error processing order ${order.id}:`, err);
             results.errors.push(`Order ${order.order_number}: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -184,6 +217,7 @@ serve(async (req) => {
     } catch (err) {
       console.error('Import error:', err);
       results.errors.push(err instanceof Error ? err.message : 'Unknown error');
+      results.success = false;
     }
 
     // Update import status
@@ -202,12 +236,12 @@ serve(async (req) => {
       integration_type: 'shopify',
       event_type: 'historical_import',
       status: results.errors.length > 0 ? 'completed_with_errors' : 'success',
-      response_summary: `Imported ${results.ordersProcessed} orders, ${results.invoicesCreated} invoices, ${results.accountsCreated} accounts`,
-      invoices_created: results.invoicesCreated,
-      accounts_created: results.accountsCreated,
+      response_summary: `Imported ${results.orders_processed} orders, ${results.invoices_created} invoices, ${results.accounts_created} accounts`,
+      invoices_created: results.invoices_created,
+      accounts_created: results.accounts_created,
     });
 
-    console.log(`Import complete: ${results.ordersProcessed} orders, ${results.invoicesCreated} invoices`);
+    console.log(`Import complete: ${results.orders_processed} orders, ${results.invoices_created} invoices`);
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -216,6 +250,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Import error:', error);
     return new Response(JSON.stringify({ 
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error' 
     }), {
       status: 500,

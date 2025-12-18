@@ -356,6 +356,7 @@ export type Database = {
       }
       brand_integrations: {
         Row: {
+          api_access_token: string | null
           brand_id: string
           created_at: string
           id: string
@@ -369,6 +370,7 @@ export type Database = {
           webhook_secret: string | null
         }
         Insert: {
+          api_access_token?: string | null
           brand_id: string
           created_at?: string
           id?: string
@@ -382,6 +384,7 @@ export type Database = {
           webhook_secret?: string | null
         }
         Update: {
+          api_access_token?: string | null
           brand_id?: string
           created_at?: string
           id?: string
