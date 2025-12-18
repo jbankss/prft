@@ -72,67 +72,69 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
       const rangeStart = dateRange?.start || subDays(now, 30);
       const rangeEnd = dateRange?.end || now;
 
-      // Fetch invoices with accounts - use due_date for actual order date
-      const { data: invoices, error } = await supabase
-        .from('invoices')
-        .select(`
-          *,
-          accounts!inner(account_name, brand_id)
-        `)
-        .eq('accounts.brand_id', currentBrand.id);
+      // Fetch shopify_orders for REVENUE data (sales to customers)
+      const { data: orders, error } = await supabase
+        .from('shopify_orders')
+        .select('*')
+        .eq('brand_id', currentBrand.id)
+        .gte('order_date', rangeStart.toISOString())
+        .lte('order_date', endOfDay(rangeEnd).toISOString());
 
       if (error) throw error;
 
-      // Filter by date range using due_date (actual order date from Shopify)
-      const getOrderDate = (inv: any) => {
-        // For Shopify orders, due_date contains the actual order date
-        // Fall back to created_at for manual entries
-        return new Date(inv.due_date || inv.created_at);
-      };
+      // Also fetch all orders for today/week/month calculations (may extend beyond range)
+      const { data: allOrders } = await supabase
+        .from('shopify_orders')
+        .select('*')
+        .eq('brand_id', currentBrand.id);
 
-      // Calculate today's revenue using actual order date
-      const todayRevenue = invoices
-        ?.filter(inv => getOrderDate(inv) >= today)
-        .reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
+      const allOrdersList = allOrders || [];
+
+      // Calculate today's revenue
+      const todayRevenue = allOrdersList
+        .filter(o => new Date(o.order_date) >= today)
+        .reduce((sum, o) => sum + Number(o.total_amount), 0);
 
       // Calculate yesterday's revenue
-      const yesterdayRevenue = invoices
-        ?.filter(inv => {
-          const date = getOrderDate(inv);
+      const yesterdayRevenue = allOrdersList
+        .filter(o => {
+          const date = new Date(o.order_date);
           return date >= yesterday && date < today;
         })
-        .reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
+        .reduce((sum, o) => sum + Number(o.total_amount), 0);
 
       // Calculate week revenue
-      const weekRevenue = invoices
-        ?.filter(inv => getOrderDate(inv) >= weekStart)
-        .reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
+      const weekRevenue = allOrdersList
+        .filter(o => new Date(o.order_date) >= weekStart)
+        .reduce((sum, o) => sum + Number(o.total_amount), 0);
 
       // Calculate month revenue
-      const monthRevenue = invoices
-        ?.filter(inv => getOrderDate(inv) >= monthStart)
-        .reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
+      const monthRevenue = allOrdersList
+        .filter(o => new Date(o.order_date) >= monthStart)
+        .reduce((sum, o) => sum + Number(o.total_amount), 0);
 
-      // Orders today - using actual order date
-      const ordersToday = invoices?.filter(inv => getOrderDate(inv) >= today).length || 0;
+      // Orders today count
+      const ordersToday = allOrdersList.filter(o => new Date(o.order_date) >= today).length;
 
-      // Active vendors (accounts with invoices in date range)
-      const invoicesInRange = invoices?.filter(inv => {
-        const date = getOrderDate(inv);
-        return date >= rangeStart && date <= rangeEnd;
-      }) || [];
-      
-      const activeVendors = new Set(invoicesInRange.map(inv => inv.account_id)).size;
+      // Orders in range
+      const ordersInRange = orders || [];
+
+      // Active vendors (unique vendors with orders in date range)
+      const activeVendors = new Set(ordersInRange.map(o => o.vendor)).size;
 
       // Average order value in range
-      const avgOrderValue = invoicesInRange.length > 0 
-        ? invoicesInRange.reduce((sum, inv) => sum + Number(inv.amount), 0) / invoicesInRange.length 
+      const avgOrderValue = ordersInRange.length > 0 
+        ? ordersInRange.reduce((sum, o) => sum + Number(o.total_amount), 0) / ordersInRange.length 
         : 0;
 
-      // Pending payments
-      const pendingPayments = invoices
-        ?.filter(inv => inv.status === 'pending')
-        .reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
+      // Pending payments - use accounts manual_balance for vendor expenses
+      const { data: accounts } = await supabase
+        .from('accounts')
+        .select('manual_balance')
+        .eq('brand_id', currentBrand.id);
+      
+      const pendingPayments = (accounts || [])
+        .reduce((sum, a) => sum + Number(a.manual_balance || 0), 0);
 
       // Daily revenue for date range
       const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
@@ -141,10 +143,10 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
         dailyRevenueMap.set(format(day, 'yyyy-MM-dd'), 0);
       });
 
-      invoices?.forEach(inv => {
-        const date = format(getOrderDate(inv), 'yyyy-MM-dd');
+      ordersInRange.forEach(o => {
+        const date = format(new Date(o.order_date), 'yyyy-MM-dd');
         if (dailyRevenueMap.has(date)) {
-          dailyRevenueMap.set(date, dailyRevenueMap.get(date)! + Number(inv.amount));
+          dailyRevenueMap.set(date, dailyRevenueMap.get(date)! + Number(o.total_amount));
         }
       });
 
@@ -157,6 +159,15 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
       let comparisonTotalRevenue: number | undefined;
 
       if (dateRange?.comparison) {
+        const { data: compOrders } = await supabase
+          .from('shopify_orders')
+          .select('*')
+          .eq('brand_id', currentBrand.id)
+          .gte('order_date', dateRange.comparison.start.toISOString())
+          .lte('order_date', endOfDay(dateRange.comparison.end).toISOString());
+
+        const compOrdersList = compOrders || [];
+
         const compDays = eachDayOfInterval({ 
           start: dateRange.comparison.start, 
           end: dateRange.comparison.end 
@@ -166,11 +177,10 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
           compMap.set(format(day, 'yyyy-MM-dd'), 0);
         });
 
-        invoices?.forEach(inv => {
-          const orderDate = getOrderDate(inv);
-          const date = format(orderDate, 'yyyy-MM-dd');
+        compOrdersList.forEach(o => {
+          const date = format(new Date(o.order_date), 'yyyy-MM-dd');
           if (compMap.has(date)) {
-            compMap.set(date, compMap.get(date)! + Number(inv.amount));
+            compMap.set(date, compMap.get(date)! + Number(o.total_amount));
           }
         });
 
@@ -181,18 +191,17 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
         comparisonTotalRevenue = comparisonDailyRevenue.reduce((sum, d) => sum + d.amount, 0);
       }
 
-      // Top vendors
+      // Top vendors - by sales revenue in the date range
       const vendorMap = new Map<string, { name: string; revenue: number; orderCount: number }>();
-      invoicesInRange.forEach(inv => {
-        const existing = vendorMap.get(inv.account_id);
-        const vendorName = (inv.accounts as any).account_name;
+      ordersInRange.forEach(o => {
+        const existing = vendorMap.get(o.vendor);
         if (existing) {
-          existing.revenue += Number(inv.amount);
+          existing.revenue += Number(o.total_amount);
           existing.orderCount += 1;
         } else {
-          vendorMap.set(inv.account_id, {
-            name: vendorName,
-            revenue: Number(inv.amount),
+          vendorMap.set(o.vendor, {
+            name: o.vendor,
+            revenue: Number(o.total_amount),
             orderCount: 1,
           });
         }
@@ -206,14 +215,14 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
         .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 10);
 
-      // Sales channels from invoices source field (in date range)
+      // Sales channels from orders source field (in date range)
       let posRevenue = 0;
       let onlineRevenue = 0;
       let tiktokRevenue = 0;
 
-      invoicesInRange.forEach(inv => {
-        const source = (inv.source || '').toLowerCase();
-        const amount = Number(inv.amount);
+      ordersInRange.forEach(o => {
+        const source = (o.source || '').toLowerCase();
+        const amount = Number(o.total_amount);
         
         if (source === 'pos') {
           posRevenue += amount;
@@ -224,18 +233,17 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
         }
       });
 
-      // Recent orders - show most recent by actual order date, not import date
-      // Prioritize webhook orders (where created_at is close to due_date)
-      const recentOrders = invoices
-        ?.sort((a, b) => getOrderDate(b).getTime() - getOrderDate(a).getTime())
+      // Recent orders - show most recent by order date
+      const recentOrders = ordersInRange
+        .sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime())
         .slice(0, 20)
-        .map(inv => ({
-          orderNumber: inv.invoice_number,
-          vendor: (inv.accounts as any).account_name,
-          amount: Number(inv.amount),
-          time: inv.due_date || inv.created_at, // Use actual order time
-          source: inv.source || 'online',
-        })) || [];
+        .map(o => ({
+          orderNumber: `#${o.order_number}`,
+          vendor: o.vendor,
+          amount: Number(o.total_amount),
+          time: o.order_date,
+          source: o.source || 'online',
+        }));
 
       setMetrics({
         userName,
@@ -264,7 +272,7 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
   useEffect(() => {
     fetchMetrics();
 
-    // Set up real-time subscription
+    // Set up real-time subscription for shopify_orders
     const channel = supabase
       .channel('dashboard-updates')
       .on(
@@ -272,7 +280,7 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
         {
           event: '*',
           schema: 'public',
-          table: 'invoices',
+          table: 'shopify_orders',
         },
         () => fetchMetrics()
       )
@@ -281,7 +289,7 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
         {
           event: '*',
           schema: 'public',
-          table: 'webhook_logs',
+          table: 'accounts',
         },
         () => fetchMetrics()
       )
