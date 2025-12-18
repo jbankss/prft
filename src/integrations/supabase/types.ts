@@ -1013,52 +1013,70 @@ export type Database = {
       import_progress: {
         Row: {
           accounts_created: number | null
+          avg_order_time_ms: number | null
           brand_id: string
+          chunk_number: number | null
           completed_at: string | null
           current_order_date: string | null
           current_order_number: string | null
           error_details: Json | null
           errors: number | null
+          estimated_completion_at: string | null
+          expected_new_orders: number | null
           id: string
           invoices_created: number | null
           orders_processed: number | null
+          page_cursor: string | null
           skipped: number | null
           started_at: string | null
           status: string
+          total_chunks_estimate: number | null
           total_orders: number | null
           updated_at: string | null
         }
         Insert: {
           accounts_created?: number | null
+          avg_order_time_ms?: number | null
           brand_id: string
+          chunk_number?: number | null
           completed_at?: string | null
           current_order_date?: string | null
           current_order_number?: string | null
           error_details?: Json | null
           errors?: number | null
+          estimated_completion_at?: string | null
+          expected_new_orders?: number | null
           id?: string
           invoices_created?: number | null
           orders_processed?: number | null
+          page_cursor?: string | null
           skipped?: number | null
           started_at?: string | null
           status?: string
+          total_chunks_estimate?: number | null
           total_orders?: number | null
           updated_at?: string | null
         }
         Update: {
           accounts_created?: number | null
+          avg_order_time_ms?: number | null
           brand_id?: string
+          chunk_number?: number | null
           completed_at?: string | null
           current_order_date?: string | null
           current_order_number?: string | null
           error_details?: Json | null
           errors?: number | null
+          estimated_completion_at?: string | null
+          expected_new_orders?: number | null
           id?: string
           invoices_created?: number | null
           orders_processed?: number | null
+          page_cursor?: string | null
           skipped?: number | null
           started_at?: string | null
           status?: string
+          total_chunks_estimate?: number | null
           total_orders?: number | null
           updated_at?: string | null
         }
