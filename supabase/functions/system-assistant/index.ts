@@ -81,7 +81,6 @@ ${brandContext} ${pageContext}
           { role: "system", content: systemPrompt },
           ...messages,
         ],
-        stream: true,
       }),
     });
 
@@ -106,8 +105,11 @@ ${brandContext} ${pageContext}
       });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    const data = await response.json();
+    const assistantResponse = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't generate a response.";
+    
+    return new Response(JSON.stringify({ response: assistantResponse }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("system assistant error:", e);
