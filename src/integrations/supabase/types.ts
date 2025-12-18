@@ -1010,6 +1010,62 @@ export type Database = {
           },
         ]
       }
+      import_progress: {
+        Row: {
+          accounts_created: number | null
+          brand_id: string
+          completed_at: string | null
+          error_details: Json | null
+          errors: number | null
+          id: string
+          invoices_created: number | null
+          orders_processed: number | null
+          skipped: number | null
+          started_at: string | null
+          status: string
+          total_orders: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          accounts_created?: number | null
+          brand_id: string
+          completed_at?: string | null
+          error_details?: Json | null
+          errors?: number | null
+          id?: string
+          invoices_created?: number | null
+          orders_processed?: number | null
+          skipped?: number | null
+          started_at?: string | null
+          status?: string
+          total_orders?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          accounts_created?: number | null
+          brand_id?: string
+          completed_at?: string | null
+          error_details?: Json | null
+          errors?: number | null
+          id?: string
+          invoices_created?: number | null
+          orders_processed?: number | null
+          skipped?: number | null
+          started_at?: string | null
+          status?: string
+          total_orders?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_progress_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           account_id: string
