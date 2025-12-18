@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { Upload, Loader2, User } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ThemeSelector } from './ThemeSelector';
 
 interface UserSettingsDialogProps {
   open: boolean;
@@ -205,6 +206,11 @@ export function UserSettingsDialog({ open, onOpenChange }: UserSettingsDialogPro
                 onBlur={(e) => updateProfileMutation.mutate({ phone_number: e.target.value })}
               />
             </div>
+
+          {/* Theme Selection */}
+          <div className="space-y-4 pt-4 border-t">
+            <ThemeSelector />
+          </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

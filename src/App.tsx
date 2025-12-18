@@ -3,9 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
+import { ThemeProvider as NextThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { BrandProvider } from "@/hooks/useBrandContext";
+import { ThemeProvider } from "@/hooks/useTheme";
 import { MainLayout } from "@/components/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
@@ -29,13 +30,14 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <NextThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <BrandProvider>
+            <ThemeProvider>
+              <BrandProvider>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
@@ -58,10 +60,11 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrandProvider>
+            </ThemeProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
-    </ThemeProvider>
+    </NextThemeProvider>
   </QueryClientProvider>
 );
 

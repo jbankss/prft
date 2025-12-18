@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useBrandContext } from '@/hooks/useBrandContext';
-import { Building2, Activity, DollarSign, CreditCard, Calendar, BarChart3 } from 'lucide-react';
+import { Building2, Activity, DollarSign, CreditCard, Calendar, BarChart3, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AccountsSidebarProps {
@@ -22,6 +22,7 @@ export function AccountsSidebar({ activeView, onViewChange }: AccountsSidebarPro
 
   const views = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'snapshot', label: 'Snapshot', icon: Sparkles },
     { id: 'activity', label: 'Activity Timeline', icon: Activity },
     { id: 'balances', label: 'Balances', icon: DollarSign },
     { id: 'payments', label: 'Payments', icon: CreditCard },

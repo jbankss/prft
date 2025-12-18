@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.integration-assistant]
 verify_jwt = true
+
+[functions.recover-failed-orders]
+verify_jwt = true
+
+[functions.import-shopify-orders]
+verify_jwt = true
+
+[functions.test-shopify-webhook]
+verify_jwt = true
