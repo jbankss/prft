@@ -219,50 +219,124 @@ export function ShopifySetupWizard({ brandId, onComplete }: ShopifySetupWizardPr
 
         {/* Step 2: API Token */}
         {currentStep === 2 && (
-          <div className="space-y-6 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Key className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold">Connect your API</h2>
-              <p className="text-muted-foreground mt-1">Paste your Admin API access token</p>
-            </div>
-
-            {/* Visual Guide */}
-            <div className="bg-muted/50 rounded-lg p-4 text-left space-y-3">
-              <p className="text-sm font-medium">Quick steps in Shopify:</p>
-              <ol className="text-sm text-muted-foreground space-y-2">
-                <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0 mt-0.5">1</Badge>
-                  <span>Settings → Apps → Develop apps</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0 mt-0.5">2</Badge>
-                  <span>Create an app → Configure scopes → Install</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0 mt-0.5">3</Badge>
-                  <span>Copy the Admin API access token</span>
-                </li>
-              </ol>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full mt-2"
-                onClick={() => window.open(`https://${shopDomain}.myshopify.com/admin/settings/apps/development`, '_blank')}
-              >
-                Open Shopify Settings
-                <ExternalLink className="h-3 w-3 ml-2" />
-              </Button>
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Key className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold mt-4">Connect your API</h2>
+              <p className="text-muted-foreground mt-1">Follow these steps to create a custom app</p>
             </div>
 
-            <Input
-              type="password"
-              value={apiToken}
-              onChange={(e) => setApiToken(e.target.value)}
-              placeholder="shpat_xxxxxxxxxxxxxxxxxxxxx"
-              className="text-center h-14 font-mono"
-            />
+            {/* Detailed Step-by-Step Guide */}
+            <div className="space-y-3">
+              {/* Step 2a: Enable Custom App Development */}
+              <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-primary text-primary-foreground">2a</Badge>
+                  <span className="font-medium text-sm">Enable custom app development</span>
+                  <Badge variant="outline" className="text-xs ml-auto">One-time setup</Badge>
+                </div>
+                <ol className="text-sm text-muted-foreground space-y-1.5 ml-8">
+                  <li>• Go to <strong>Settings → Apps and sales channels</strong></li>
+                  <li>• Click <strong>"Develop apps"</strong> at the top</li>
+                  <li>• Click <strong>"Allow custom app development"</strong> button</li>
+                  <li>• Click <strong>"Allow custom app development"</strong> again to confirm</li>
+                </ol>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={() => window.open(`https://${shopDomain}.myshopify.com/admin/settings/apps/development`, '_blank')}
+                >
+                  Open App Settings
+                  <ExternalLink className="h-3 w-3 ml-2" />
+                </Button>
+              </div>
+
+              {/* Step 2b: Create App */}
+              <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-primary text-primary-foreground">2b</Badge>
+                  <span className="font-medium text-sm">Create a new app</span>
+                </div>
+                <ol className="text-sm text-muted-foreground space-y-1.5 ml-8">
+                  <li>• Click <strong>"Create an app"</strong></li>
+                  <li>• App name: <code className="bg-background px-1.5 py-0.5 rounded text-xs">Enzo Integration</code></li>
+                  <li>• Click <strong>"Create app"</strong></li>
+                </ol>
+              </div>
+
+              {/* Step 2c: Configure Scopes */}
+              <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-primary text-primary-foreground">2c</Badge>
+                  <span className="font-medium text-sm">Configure API scopes</span>
+                </div>
+                <ol className="text-sm text-muted-foreground space-y-1.5 ml-8">
+                  <li>• Click <strong>"Configure Admin API scopes"</strong></li>
+                  <li>• Search and check these boxes:</li>
+                </ol>
+                <div className="ml-8 mt-2 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm bg-background rounded px-3 py-2">
+                    <Check className="h-4 w-4 text-green-500" />
+                    <code className="text-xs font-mono">read_orders</code>
+                    <span className="text-muted-foreground text-xs">— Orders</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm bg-background rounded px-3 py-2">
+                    <Check className="h-4 w-4 text-green-500" />
+                    <code className="text-xs font-mono">read_products</code>
+                    <span className="text-muted-foreground text-xs">— Products</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm bg-background rounded px-3 py-2">
+                    <Check className="h-4 w-4 text-green-500" />
+                    <code className="text-xs font-mono">read_customers</code>
+                    <span className="text-muted-foreground text-xs">— Customers</span>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground ml-8 mt-2">• Click <strong>"Save"</strong></p>
+              </div>
+
+              {/* Step 2d: Install App */}
+              <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-primary text-primary-foreground">2d</Badge>
+                  <span className="font-medium text-sm">Install the app</span>
+                </div>
+                <ol className="text-sm text-muted-foreground space-y-1.5 ml-8">
+                  <li>• Click <strong>"Install app"</strong> button (top right)</li>
+                  <li>• Click <strong>"Install"</strong> to confirm</li>
+                </ol>
+              </div>
+
+              {/* Step 2e: Copy Token */}
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 text-left space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-amber-500 text-white">2e</Badge>
+                  <span className="font-medium text-sm">Copy your API token</span>
+                  <Badge variant="destructive" className="text-xs ml-auto">⚠️ Only shown once!</Badge>
+                </div>
+                <ol className="text-sm text-muted-foreground space-y-1.5 ml-8">
+                  <li>• Under <strong>"Admin API access token"</strong>, click <strong>"Reveal token once"</strong></li>
+                  <li>• <strong>Copy the token immediately</strong> — it won't be shown again!</li>
+                  <li>• Paste it in the field below</li>
+                </ol>
+              </div>
+            </div>
+
+            {/* Token Input */}
+            <div className="space-y-2">
+              <Input
+                type="password"
+                value={apiToken}
+                onChange={(e) => setApiToken(e.target.value)}
+                placeholder="shpat_xxxxxxxxxxxxxxxxxxxxx"
+                className="text-center h-14 font-mono"
+              />
+              <p className="text-xs text-center text-muted-foreground">
+                Starts with <code className="bg-muted px-1 rounded">shpat_</code>
+              </p>
+            </div>
 
             <div className="flex gap-3">
               <Button
