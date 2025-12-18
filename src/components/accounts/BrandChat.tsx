@@ -104,7 +104,7 @@ export function BrandChat({ brandId }: { brandId: string }) {
                       {msg.profiles?.full_name || 'Unknown User'}
                     </span>
                     <span className="text-xs opacity-70">
-                      {format(new Date(msg.created_at), 'h:mm a')}
+                      {format(new Date(msg.created_at), 'MMM d, h:mm a')}
                     </span>
                   </div>
                   <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>

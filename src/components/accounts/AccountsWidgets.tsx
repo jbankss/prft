@@ -25,11 +25,19 @@ export function AccountsWidgets() {
       if (!accounts) return;
 
       // Calculate real P&L from actual data
+      // P&L = Revenue - Expenses
+      // Expenses = manual_balance (amount owed) + unpaid invoices
       let totalPL = 0;
       accounts.forEach((account) => {
-        const revenue = account.invoices?.reduce((sum: number, inv: any) => sum + Number(inv.amount), 0) || 0;
-        const costs = account.charges?.reduce((sum: number, charge: any) => sum + Number(charge.amount), 0) || 0;
-        totalPL += (revenue - costs);
+        const amountOwed = Number(account.manual_balance || 0);
+        
+        // Sum unpaid invoices as expenses
+        const unpaidInvoices = (account.invoices || [])
+          .filter((inv: any) => inv.status !== 'paid')
+          .reduce((sum: number, inv: any) => sum + Number(inv.amount), 0);
+        
+        // Both count against P&L
+        totalPL -= (amountOwed + unpaidInvoices);
       });
 
       // Calculate inventory value from account balances
@@ -73,16 +81,16 @@ export function AccountsWidgets() {
   const widgets = [
     {
       title: 'Total P&L',
-      value: `$${metrics.totalPL.toLocaleString()}`,
+      value: `${metrics.totalPL >= 0 ? '+' : '-'}$${Math.abs(metrics.totalPL).toLocaleString()}`,
       icon: DollarSign,
-      trend: metrics.totalPL >= 0 ? '+' : '-',
+      trend: metrics.totalPL >= 0 ? 'Profit' : 'Expenses',
       color: metrics.totalPL >= 0 ? 'text-green-500' : 'text-red-500',
     },
     {
       title: 'Active Accounts',
       value: metrics.totalAccounts.toString(),
       icon: TrendingUp,
-      trend: '+2 this month',
+      trend: 'Vendors',
       color: 'text-blue-500',
     },
     {

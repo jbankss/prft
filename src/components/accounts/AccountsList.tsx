@@ -1,7 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, DollarSign, FileText, Receipt, MessageSquare, Pencil, TrendingUp, TrendingDown, Package, Calendar, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Building2, MoreHorizontal, Pencil, Trash2, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
@@ -13,6 +14,7 @@ interface Account {
   id: string;
   account_name: string;
   balance: number;
+  manual_balance?: number;
   status: string;
   notes?: string;
   created_at: string;
@@ -37,7 +39,6 @@ export function AccountsList({
   const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
 
   useEffect(() => {
-    // Subscribe to real-time changes
     const channel = supabase
       .channel('accounts-real-time')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'charges' }, onRefresh)
@@ -81,15 +82,25 @@ export function AccountsList({
     }
   };
 
-  // Calculate real metrics from actual data
+  // Calculate real metrics - P&L includes manual_balance and unpaid invoices as expenses
   const getAccountMetrics = (account: Account) => {
     const charges = account.charges || [];
     const invoices = account.invoices || [];
     
     const purchases = charges.reduce((sum, charge) => sum + Number(charge.amount), 0);
-    const sales = invoices.reduce((sum, invoice) => sum + Number(invoice.amount), 0);
-    const profitLoss = sales - purchases;
-    const profitMargin = purchases > 0 ? ((profitLoss / purchases) * 100).toFixed(1) : '0.0';
+    
+    // Calculate unpaid invoice amounts (pending/unpaid invoices count against P&L)
+    const unpaidInvoiceAmount = invoices
+      .filter((inv: any) => inv.status !== 'paid')
+      .reduce((sum: number, inv: any) => sum + Number(inv.amount), 0);
+    
+    const amountOwed = Number(account.manual_balance || 0);
+    
+    // For now, sales is 0 since shopify_orders are at brand level, not account level
+    // P&L = -purchases - amountOwed - unpaidInvoices (all expenses)
+    const profitLoss = -(purchases + amountOwed + unpaidInvoiceAmount);
+    
+    const totalExpenses = purchases + amountOwed + unpaidInvoiceAmount;
     
     // Calculate average days between charges
     const chargeDates = charges.map((c: any) => new Date(c.charge_date).getTime()).sort();
@@ -101,148 +112,125 @@ export function AccountsList({
       }
       avgDaysBetweenOrders = Math.round(differences.reduce((a, b) => a + b, 0) / differences.length);
     }
-    
-    const lastOrderDate = chargeDates.length > 0 
-      ? new Date(chargeDates[chargeDates.length - 1])
-      : new Date();
 
     return {
       purchases,
-      sales,
+      amountOwed,
+      unpaidInvoiceAmount,
       profitLoss,
-      profitMargin: Number(profitMargin),
+      totalExpenses,
       avgDaysBetweenOrders: avgDaysBetweenOrders || 30,
-      lastOrderDate,
     };
   };
 
   return (
-    <div className="grid gap-6">
-      {accounts.map((account) => {
-        const metrics = getAccountMetrics(account);
-        const isProfitable = metrics.profitLoss >= 0;
+    <>
+      {/* Compact Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {accounts.map((account) => {
+          const metrics = getAccountMetrics(account);
+          const isExpanded = expandedAccounts[account.id];
 
-        return (
-          <Card key={account.id} className="hover-lift">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Building2 className="h-5 w-5 text-primary" />
+          return (
+            <Card key={account.id} className="hover-lift">
+              <CardContent className="p-4">
+                {/* Header Row */}
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-1.5 rounded-lg bg-primary/10 shrink-0">
+                      <Building2 className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-base truncate">{account.account_name}</h3>
+                      <p className="text-xs text-muted-foreground truncate">{account.brands?.name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Badge variant={account.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                      {account.status}
+                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-card border border-border">
+                        <DropdownMenuItem onClick={() => handleEdit(account)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setAccountToDelete(account)} className="text-destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                {/* Metrics Row */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Amount Owed</p>
+                    <p className="text-sm font-semibold text-destructive">
+                      ${metrics.amountOwed.toLocaleString()}
+                    </p>
                   </div>
                   <div>
-                    <CardTitle className="text-3xl">{account.account_name}</CardTitle>
-                    {account.brands && (
-                      <CardDescription className="text-base mt-1">{account.brands.name}</CardDescription>
-                    )}
+                    <p className="text-xs text-muted-foreground">Unpaid Invoices</p>
+                    <p className="text-sm font-semibold text-destructive">
+                      ${metrics.unpaidInvoiceAmount.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Purchases</p>
+                    <p className="text-sm font-semibold">${metrics.purchases.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Net P&L</p>
+                    <p className={`text-sm font-semibold flex items-center gap-1 ${metrics.profitLoss >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {metrics.profitLoss >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                      {metrics.profitLoss >= 0 ? '+' : ''}${metrics.profitLoss.toLocaleString()}
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={isProfitable ? 'default' : 'destructive'} className="gap-1">
-                    {isProfitable ? (
-                      <TrendingUp className="h-3 w-3" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3" />
-                    )}
-                    {isProfitable ? '+' : ''}{metrics.profitMargin}%
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(account)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAccountToDelete(account)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={expandedAccounts[account.id] ? 'secondary' : 'outline'}
-                    size="sm"
-                    onClick={() => toggleAccount(account.id)}
-                  >
-                    {expandedAccounts[account.id] ? 'Collapse' : 'Expand'}
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Key Metrics Grid */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-                    <Package className="h-4 w-4" />
-                    <span>Total Purchases</span>
-                  </div>
-                  <p className="text-2xl font-display font-semibold">${metrics.purchases.toLocaleString()}</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-                    <DollarSign className="h-4 w-4" />
-                    <span>Total Sales</span>
-                  </div>
-                  <p className="text-2xl font-display font-semibold">${metrics.sales.toLocaleString()}</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-                    {isProfitable ? (
-                      <TrendingUp className="h-4 w-4 text-success" />
-                    ) : (
-                      <TrendingDown className="h-4 w-4 text-destructive" />
-                    )}
-                    <span>Net P&L</span>
-                  </div>
-                  <p className={`text-2xl font-display font-semibold ${isProfitable ? 'text-success' : 'text-destructive'}`}>
-                    {isProfitable ? '+' : '-'}${Math.abs(metrics.profitLoss).toLocaleString()}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
-                    <Calendar className="h-4 w-4" />
-                    <span>Order Cycle</span>
-                  </div>
-                  <p className="text-2xl font-display font-semibold">{metrics.avgDaysBetweenOrders}d</p>
-                </div>
-              </div>
 
-              {/* Additional Info */}
-              <div className="flex items-center justify-between border-t border-border/50 pt-6">
-                <div>
-                  <span className="text-muted-foreground text-sm">Balance: </span>
-                  <span className="font-semibold text-lg">${Number(account.balance).toLocaleString()}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-sm">Last Order: </span>
-                  <span className="font-medium">{metrics.lastOrderDate.toLocaleDateString()}</span>
-                </div>
-                <Badge variant={account.status === 'active' ? 'default' : 'secondary'}>
-                  {account.status}
-                </Badge>
-              </div>
+                {/* Expand Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => toggleAccount(account.id)}
+                >
+                  {isExpanded ? (
+                    <>
+                      <ChevronUp className="h-4 w-4 mr-1" />
+                      Collapse
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4 mr-1" />
+                      View Details
+                    </>
+                  )}
+                </Button>
 
-              {account.notes && (
-                <p className="text-sm text-muted-foreground mt-6 p-4 bg-muted/30 rounded-2xl">
-                  {account.notes}
-                </p>
-              )}
-
-              {expandedAccounts[account.id] && (
-                <div className="pt-6 mt-6 border-t border-border/50">
-                  <AccountDetails 
-                    accountId={account.id}
-                    onClose={() => toggleAccount(account.id)}
-                    onRefresh={onRefresh}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+                {/* Expanded Details */}
+                {isExpanded && (
+                  <div className="pt-3 mt-3 border-t border-border/50">
+                    <AccountDetails
+                      accountId={account.id}
+                      onClose={() => toggleAccount(account.id)}
+                      onRefresh={onRefresh}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
       {selectedAccount && (
         <AccountDialog
@@ -273,6 +261,6 @@ export function AccountsList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

@@ -3,8 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import { InvoiceDialog } from './InvoiceDialog';
+import { InvoiceUploadDialog } from './InvoiceUploadDialog';
 
 export function InvoicesList({
   accountId,
@@ -15,6 +16,7 @@ export function InvoicesList({
 }) {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [showDialog, setShowDialog] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -57,12 +59,18 @@ export function InvoicesList({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-2">
         <h3 className="font-semibold">Invoices</h3>
-        <Button size="sm" onClick={() => setShowDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Invoice
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowUploadDialog(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Upload PDF
+          </Button>
+          <Button size="sm" onClick={() => setShowDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Invoice
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -72,8 +80,11 @@ export function InvoicesList({
               <div>
                 <p className="font-medium">{invoice.invoice_number}</p>
                 <p className="text-sm text-muted-foreground">
-                  Due: {new Date(invoice.due_date).toLocaleDateString()}
+                  Due: {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'N/A'}
                 </p>
+                {invoice.source === 'upload' && (
+                  <p className="text-xs text-muted-foreground">Uploaded</p>
+                )}
               </div>
               <div className="text-right">
                 <p className="font-semibold">${Number(invoice.amount).toFixed(2)}</p>
@@ -92,6 +103,13 @@ export function InvoicesList({
       <InvoiceDialog
         open={showDialog}
         onOpenChange={setShowDialog}
+        accountId={accountId}
+        onSuccess={onRefresh}
+      />
+
+      <InvoiceUploadDialog
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
         accountId={accountId}
         onSuccess={onRefresh}
       />
