@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,9 +24,10 @@ import {
   FileText,
   Search,
   Trash2,
-  Wrench
+  Wrench,
+  Clock
 } from 'lucide-react';
-import { format, subDays, startOfYear } from 'date-fns';
+import { format, subDays, startOfYear, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface ConnectionStatusProps {
@@ -51,6 +52,12 @@ interface ImportProgress {
   completed_at: string | null;
   current_order_number: string | null;
   current_order_date: string | null;
+  expected_new_orders: number;
+  page_cursor: string | null;
+  chunk_number: number;
+  total_chunks_estimate: number;
+  avg_order_time_ms: number | null;
+  estimated_completion_at: string | null;
 }
 
 interface ScanResult {
@@ -74,6 +81,52 @@ export function ConnectionStatus({
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<DatePreset>('last30');
   const [customDate, setCustomDate] = useState<Date | undefined>(undefined);
+  const [continuationInProgress, setContinuationInProgress] = useState(false);
+
+  const getFromDate = useCallback((): Date => {
+    const today = new Date();
+    switch (selectedPreset) {
+      case 'last30':
+        return subDays(today, 30);
+      case 'last90':
+        return subDays(today, 90);
+      case 'ytd':
+        return startOfYear(today);
+      case 'custom':
+        return customDate || subDays(today, 30);
+      default:
+        return subDays(today, 30);
+    }
+  }, [selectedPreset, customDate]);
+
+  // Function to trigger next chunk
+  const triggerNextChunk = useCallback(async (progress: ImportProgress) => {
+    if (continuationInProgress) return;
+    
+    setContinuationInProgress(true);
+    console.log(`Triggering chunk ${progress.chunk_number + 1}...`);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Rate limiting delay
+      
+      await supabase.functions.invoke('import-shopify-orders', {
+        body: { 
+          brand_id: brandId,
+          from_date: format(getFromDate(), 'yyyy-MM-dd'),
+          mode: 'import',
+          expected_new_orders: progress.expected_new_orders,
+          page_cursor: progress.page_cursor,
+          chunk_number: progress.chunk_number + 1,
+          progress_id: progress.id
+        }
+      });
+    } catch (error) {
+      console.error('Error triggering next chunk:', error);
+      toast.error('Failed to continue import. You can retry by clicking Import again.');
+    } finally {
+      setContinuationInProgress(false);
+    }
+  }, [brandId, getFromDate, continuationInProgress]);
 
   // Subscribe to real-time progress updates
   useEffect(() => {
@@ -94,10 +147,14 @@ export function ConnectionStatus({
             const progress = payload.new as ImportProgress;
             setImportProgress(progress);
             
-            if (progress.status === 'completed' || progress.status === 'completed_with_errors') {
+            // Handle status changes
+            if (progress.status === 'needs_continuation' && progress.page_cursor) {
+              // Auto-trigger next chunk
+              triggerNextChunk(progress);
+            } else if (progress.status === 'completed' || progress.status === 'completed_with_errors') {
               setIsImporting(false);
               setIsRepairing(false);
-              setScanResult(null); // Reset scan after import
+              setScanResult(null);
               if (progress.status === 'completed') {
                 toast.success(`Import complete: ${progress.invoices_created} invoices, ${progress.accounts_created} new accounts`);
               } else {
@@ -112,23 +169,7 @@ export function ConnectionStatus({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [brandId]);
-
-  const getFromDate = (): Date => {
-    const today = new Date();
-    switch (selectedPreset) {
-      case 'last30':
-        return subDays(today, 30);
-      case 'last90':
-        return subDays(today, 90);
-      case 'ytd':
-        return startOfYear(today);
-      case 'custom':
-        return customDate || subDays(today, 30);
-      default:
-        return subDays(today, 30);
-    }
-  };
+  }, [brandId, triggerNextChunk]);
 
   const handleScanOrders = async () => {
     setIsScanning(true);
@@ -181,7 +222,8 @@ export function ConnectionStatus({
         body: { 
           brand_id: brandId,
           from_date: format(fromDate, 'yyyy-MM-dd'),
-          mode: 'import'
+          mode: 'import',
+          expected_new_orders: scanResult?.new_orders || 0
         }
       });
 
@@ -191,7 +233,7 @@ export function ConnectionStatus({
         toast.error(data.error || 'Import failed');
         setIsImporting(false);
       } else {
-        toast.info('Import started in background. You can leave this page.');
+        toast.info('Import started. You can safely leave this page.');
       }
     } catch (error) {
       console.error('Error importing orders:', error);
@@ -213,7 +255,8 @@ export function ConnectionStatus({
           brand_id: brandId,
           from_date: format(fromDate, 'yyyy-MM-dd'),
           mode: 'import',
-          repair: true
+          repair: true,
+          expected_new_orders: 0 // Will count during import
         }
       });
 
@@ -240,8 +283,21 @@ export function ConnectionStatus({
   ];
 
   const getProgressPercent = () => {
-    if (!importProgress || !importProgress.total_orders) return 0;
-    return Math.round((importProgress.orders_processed / importProgress.total_orders) * 100);
+    if (!importProgress) return 0;
+    
+    // Use expected_new_orders for accurate progress if available
+    const total = importProgress.expected_new_orders > 0 
+      ? importProgress.expected_new_orders 
+      : importProgress.total_orders;
+    
+    if (!total) return 0;
+    
+    // Use invoices_created for progress when we have expected_new_orders
+    const current = importProgress.expected_new_orders > 0
+      ? importProgress.invoices_created
+      : importProgress.orders_processed;
+    
+    return Math.min(99, Math.round((current / total) * 100));
   };
 
   const getStatusIcon = () => {
@@ -252,6 +308,7 @@ export function ConnectionStatus({
       case 'fetching_orders':
         return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
       case 'processing':
+      case 'needs_continuation':
         return <RefreshCw className="h-4 w-4 animate-spin text-primary" />;
       case 'completed':
         return <CheckCircle2 className="h-4 w-4 text-green-500" />;
@@ -271,19 +328,32 @@ export function ConnectionStatus({
       case 'fetching_orders':
         return 'Fetching orders from Shopify...';
       case 'processing':
+      case 'needs_continuation':
         if (importProgress.current_order_number) {
           const orderDate = importProgress.current_order_date 
             ? format(new Date(importProgress.current_order_date), 'MMM d, yyyy')
             : '';
           return `Processing ${importProgress.current_order_number} ${orderDate ? `(${orderDate})` : ''}...`;
         }
-        return `Processing order ${importProgress.orders_processed} of ${importProgress.total_orders}...`;
+        return `Processing chunk ${importProgress.chunk_number}...`;
       case 'completed':
         return isRepairing ? 'Repair complete!' : 'Import complete!';
       case 'completed_with_errors':
         return `Completed with ${importProgress.errors} errors`;
       default:
         return 'Processing...';
+    }
+  };
+
+  const getTimeEstimate = () => {
+    if (!importProgress?.estimated_completion_at) return null;
+    
+    try {
+      const completionDate = new Date(importProgress.estimated_completion_at);
+      if (completionDate <= new Date()) return 'Finishing up...';
+      return formatDistanceToNow(completionDate, { addSuffix: false });
+    } catch {
+      return null;
     }
   };
 
@@ -340,16 +410,24 @@ export function ConnectionStatus({
             Import Historical Orders
           </CardTitle>
           <CardDescription>
-            Scan and import past orders from your Shopify store. The import runs in the background.
+            Scan and import past orders from your Shopify store. Safe to leave page during import.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Real-time Progress Display */}
           {isProcessing && (
             <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-4">
-              <div className="flex items-center gap-2">
-                {getStatusIcon()}
-                <span className="font-medium">{getStatusText()}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {getStatusIcon()}
+                  <span className="font-medium">{getStatusText()}</span>
+                </div>
+                {importProgress?.chunk_number && importProgress.chunk_number > 1 && (
+                  <Badge variant="outline">
+                    Chunk {importProgress.chunk_number}
+                    {importProgress.total_chunks_estimate > 1 && ` of ~${importProgress.total_chunks_estimate}`}
+                  </Badge>
+                )}
               </div>
               
               {/* Current Order Display */}
@@ -367,9 +445,27 @@ export function ConnectionStatus({
                 </div>
               )}
               
-              {importProgress && importProgress.total_orders > 0 && (
+              {importProgress && (importProgress.expected_new_orders > 0 || importProgress.total_orders > 0) && (
                 <>
-                  <Progress value={getProgressPercent()} className="h-2" />
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>
+                        {importProgress.expected_new_orders > 0 
+                          ? `${importProgress.invoices_created} of ${importProgress.expected_new_orders} orders`
+                          : `${importProgress.orders_processed} of ${importProgress.total_orders} orders`}
+                      </span>
+                      <span>{getProgressPercent()}%</span>
+                    </div>
+                    <Progress value={getProgressPercent()} className="h-2" />
+                  </div>
+                  
+                  {/* Time Estimate */}
+                  {getTimeEstimate() && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      <span>Estimated time remaining: {getTimeEstimate()}</span>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-3 gap-3 text-sm">
                     <div className="flex items-center gap-2 p-2 bg-background rounded">
@@ -414,9 +510,10 @@ export function ConnectionStatus({
                 </>
               )}
               
-              <p className="text-xs text-muted-foreground">
-                You can leave this page. The import will continue in the background.
-              </p>
+              <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950/30 rounded text-sm text-green-700 dark:text-green-300">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Safe to leave this page. Import continues automatically in the background.</span>
+              </div>
             </div>
           )}
 
@@ -431,7 +528,7 @@ export function ConnectionStatus({
                     size="sm"
                     onClick={() => {
                       setSelectedPreset(preset.value as DatePreset);
-                      setScanResult(null); // Reset scan when date changes
+                      setScanResult(null);
                     }}
                   >
                     {preset.label}
@@ -460,7 +557,7 @@ export function ConnectionStatus({
                       selected={customDate}
                       onSelect={(date) => {
                         setCustomDate(date);
-                        setScanResult(null); // Reset scan when date changes
+                        setScanResult(null);
                       }}
                       initialFocus
                       disabled={(date) => date > new Date()}
@@ -502,9 +599,16 @@ export function ConnectionStatus({
                     </div>
                   </div>
                   {scanResult.new_orders > 0 && (
-                    <p className="text-sm text-blue-600 dark:text-blue-400">
-                      Click "Import Orders" to import {scanResult.new_orders} new orders.
-                    </p>
+                    <div className="space-y-2">
+                      <p className="text-sm text-blue-600 dark:text-blue-400">
+                        Click "Import Orders" to import {scanResult.new_orders} new orders.
+                      </p>
+                      {scanResult.new_orders > 500 && (
+                        <p className="text-xs text-muted-foreground">
+                          Large imports are processed in chunks. Estimated time: ~{Math.ceil(scanResult.new_orders / 250 * 0.5)} minutes.
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
