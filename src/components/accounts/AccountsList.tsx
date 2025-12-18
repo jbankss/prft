@@ -7,7 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AccountDetails } from './AccountDetails';
+import { AccountDetailsInline } from './AccountDetailsInline';
 import { AccountDialog } from './AccountDialog';
 
 interface Account {
@@ -219,9 +219,8 @@ export function AccountsList({
                 {/* Expanded Details */}
                 {isExpanded && (
                   <div className="pt-3 mt-3 border-t border-border/50">
-                    <AccountDetails
+                    <AccountDetailsInline
                       accountId={account.id}
-                      onClose={() => toggleAccount(account.id)}
                       onRefresh={onRefresh}
                     />
                   </div>
