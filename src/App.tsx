@@ -31,14 +31,14 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <NextThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <ThemeProvider>
-              <BrandProvider>
-              <Routes>
+      <BrowserRouter>
+        <AuthProvider>
+          <ThemeProvider>
+            <BrandProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
                 <Route path="/payments" element={<MainLayout><Payments /></MainLayout>} />
@@ -56,14 +56,14 @@ const App = () => (
                 <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
                 <Route path="/store-settings" element={<MainLayout><StoreSettings /></MainLayout>} />
                 <Route path="/user-settings" element={<MainLayout><UserSettings /></MainLayout>} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </TooltipProvider>
             </BrandProvider>
-            </ThemeProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </NextThemeProvider>
   </QueryClientProvider>
 );
