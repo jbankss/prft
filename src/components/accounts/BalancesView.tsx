@@ -105,7 +105,7 @@ export function BalancesView({ brandId }: { brandId: string }) {
   return (
     <div className="space-y-6">
       {/* Overview Totals */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
           <CardHeader className="pb-3">
             <CardDescription className="flex items-center gap-2">
@@ -167,7 +167,7 @@ export function BalancesView({ brandId }: { brandId: string }) {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">COGS</p>
                   <p className="font-semibold">${balance.totalCOGS.toLocaleString()}</p>
