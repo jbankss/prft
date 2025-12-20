@@ -44,75 +44,25 @@ export function SystemAssistant({ brandName, currentPage }: SystemAssistantProps
     setInput('');
     setIsLoading(true);
 
-    let assistantContent = '';
-
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/system-assistant`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            messages: [...messages, userMessage],
-            context: {
-              brand_name: brandName,
-              current_page: currentPage
-            }
-          }),
-        }
-      );
-
-      if (!response.ok || !response.body) {
-        throw new Error('Failed to get response');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        let newlineIndex: number;
-
-        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-          let line = buffer.slice(0, newlineIndex);
-          buffer = buffer.slice(newlineIndex + 1);
-
-          if (line.endsWith('\r')) line = line.slice(0, -1);
-          if (line.startsWith(':') || line.trim() === '') continue;
-          if (!line.startsWith('data: ')) continue;
-
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === '[DONE]') break;
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              assistantContent += content;
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                newMessages[newMessages.length - 1] = {
-                  role: 'assistant',
-                  content: assistantContent,
-                };
-                return newMessages;
-              });
-            }
-          } catch {
-            buffer = line + '\n' + buffer;
-            break;
+      const { data, error } = await supabase.functions.invoke('system-assistant', {
+        body: {
+          messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content })),
+          context: {
+            brand_name: brandName,
+            current_page: currentPage
           }
         }
-      }
+      });
+
+      if (error) throw error;
+
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.response || 'I apologize, but I could not process your request.'
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error:', error);
       toast.error('Failed to get response from assistant');

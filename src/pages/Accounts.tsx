@@ -80,26 +80,45 @@ export default function Accounts() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="border-b border-border/50 bg-card">
-        <div className="px-8 py-8">
-          <h1 className="text-5xl font-display font-semibold text-foreground">
+        <div className="px-4 py-6 md:px-8 md:py-8">
+          <h1 className="text-3xl md:text-5xl font-display font-semibold text-foreground">
             Brand Headquarters
           </h1>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <AccountsSidebar activeView={activeView} onViewChange={setActiveView} />
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Sidebar - hidden on mobile, shown on lg+ */}
+        <div className="hidden lg:block">
+          <AccountsSidebar activeView={activeView} onViewChange={setActiveView} />
+        </div>
+
+        {/* Mobile/Tablet View Tabs */}
+        <div className="lg:hidden border-b border-border/50 bg-card px-4 py-2 overflow-x-auto">
+          <div className="flex gap-2">
+            {['overview', 'snapshot', 'activity', 'balances', 'payments', 'calendar'].map((view) => (
+              <Button
+                key={view}
+                variant={activeView === view ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveView(view)}
+                className="capitalize whitespace-nowrap"
+              >
+                {view}
+              </Button>
+            ))}
+          </div>
+        </div>
 
         {/* Center Content */}
-        <div className="flex-1 overflow-auto p-8">
-          <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
             {/* Action Bar */}
-            <div className="flex justify-between items-center gap-4">
-              <h2 className="text-2xl font-semibold capitalize">{activeView}</h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+              <h2 className="text-xl md:text-2xl font-semibold capitalize">{activeView}</h2>
               {activeView === 'overview' && (
-                <div className="flex items-center gap-3 flex-1 max-w-md ml-auto">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto sm:flex-1 sm:max-w-md sm:ml-auto">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -127,7 +146,7 @@ export default function Accounts() {
             {/* View Content */}
             {activeView === 'overview' && (
               filteredAccounts.length === 0 ? (
-                <Card className="p-12 animated-gradient text-center border-border/40">
+                <Card className="p-8 md:p-12 animated-gradient text-center border-border/40">
                   <p className="text-muted-foreground mb-4">
                     {searchQuery
                       ? `No accounts matching "${searchQuery}"`
@@ -153,9 +172,9 @@ export default function Accounts() {
           </div>
         </div>
 
-        {/* Right Sidebar - Widgets (only on overview) */}
+        {/* Right Sidebar - Widgets (only on overview, hidden on mobile/tablet) */}
         {activeView === 'overview' && (
-          <div className="w-80 border-l border-border/50 bg-card p-8 overflow-auto">
+          <div className="hidden xl:block w-80 border-l border-border/50 bg-card p-6 xl:p-8 overflow-auto">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-6">
               Performance Metrics
             </h3>
