@@ -78,12 +78,7 @@ export default function StoreSettings() {
   if (!currentBrand) return null;
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        </div>
+        
 
         <div>
           <h1 className="text-3xl font-semibold tracking-tight flex items-center gap-3">
