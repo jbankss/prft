@@ -87,6 +87,10 @@ export default function Stck() {
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [factVisible, setFactVisible] = useState(true);
   const [greetingData, setGreetingData] = useState(() => getTimeGreeting(new Date().getHours()));
+  
+  // Animation states
+  const [isExiting, setIsExiting] = useState(false);
+  const [hasEntered, setHasEntered] = useState(false);
 
   // Get user's first name
   const firstName = useMemo(() => {
@@ -98,6 +102,12 @@ export default function Stck() {
     }
     return '';
   }, [user]);
+
+  // Trigger entrance animation
+  useEffect(() => {
+    const timer = setTimeout(() => setHasEntered(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Update time every second
   useEffect(() => {
@@ -136,9 +146,12 @@ export default function Stck() {
     localStorage.setItem('stck-24h', String(is24Hour));
   }, [is24Hour]);
 
-  // Exit on key press
+  // Exit with animation
   const handleExit = useCallback(() => {
-    navigate('/');
+    setIsExiting(true);
+    setTimeout(() => {
+      navigate('/');
+    }, 600); // Match stck-exit animation duration
   }, [navigate]);
 
   useEffect(() => {
@@ -164,11 +177,16 @@ export default function Stck() {
   const currentFact = funFacts[currentFactIndex];
 
   return (
-    <div className="fixed inset-0 overflow-hidden select-none bg-black">
+    <div 
+      className={cn(
+        "fixed inset-0 overflow-hidden select-none bg-black",
+        isExiting ? "stck-exit" : hasEntered ? "stck-enter" : "opacity-0"
+      )}
+    >
       {/* Background image layer - current */}
       {currentImage && (
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
           style={{ backgroundImage: `url(${currentImage.url})` }}
         />
       )}
@@ -196,11 +214,17 @@ export default function Stck() {
       {/* Subtle noise texture overlay */}
       <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
 
-      {/* Content container */}
+      {/* Content container with staggered animations */}
       <div className="relative z-10 h-full flex flex-col">
         
         {/* Header - Logo and Exit */}
-        <div className="flex items-center justify-between p-6 lg:p-10">
+        <div 
+          className={cn(
+            "flex items-center justify-between p-6 lg:p-10 transition-all duration-700 ease-elegant",
+            hasEntered && !isExiting ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
+          )}
+          style={{ transitionDelay: hasEntered ? '0.2s' : '0s' }}
+        >
           {/* Brand Logo */}
           <div className="flex items-center gap-3">
             {currentBrand?.logo_url ? (
@@ -221,7 +245,7 @@ export default function Stck() {
           {/* Exit button */}
           <button
             onClick={handleExit}
-            className="p-3 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-all duration-300 backdrop-blur-sm"
+            className="p-3 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-all duration-300 backdrop-blur-sm hover:scale-110"
           >
             <X className="h-5 w-5" />
           </button>
@@ -231,7 +255,13 @@ export default function Stck() {
         <div className="flex-1 flex flex-col items-center justify-center px-6 -mt-10">
           
           {/* Time-based greeting */}
-          <div className="flex items-center gap-3 mb-6 text-white/70">
+          <div 
+            className={cn(
+              "flex items-center gap-3 mb-6 text-white/70 transition-all duration-700 ease-elegant",
+              hasEntered && !isExiting ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+            )}
+            style={{ transitionDelay: hasEntered ? '0.3s' : '0s' }}
+          >
             {greetingData.icon}
             <span className="text-lg font-light tracking-wide">
               {greetingData.greeting}{firstName ? `, ${firstName}` : ''}
@@ -239,7 +269,13 @@ export default function Stck() {
           </div>
 
           {/* Date */}
-          <div className="mb-4">
+          <div 
+            className={cn(
+              "mb-4 transition-all duration-700 ease-elegant",
+              hasEntered && !isExiting ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+            )}
+            style={{ transitionDelay: hasEntered ? '0.35s' : '0s' }}
+          >
             <span className="text-xs md:text-sm font-medium tracking-widest uppercase text-white/50">
               {format(time, isMobile ? 'EEE, MMM d' : 'EEEE, MMMM d, yyyy')}
             </span>
@@ -247,8 +283,14 @@ export default function Stck() {
 
           {/* Giant clock */}
           <div 
-            className="flex items-baseline font-bold tracking-tighter mb-6 md:mb-8"
-            style={{ textShadow: '0 0 60px rgba(255,255,255,0.3), 0 0 120px rgba(255,255,255,0.1)' }}
+            className={cn(
+              "flex items-baseline font-bold tracking-tighter mb-6 md:mb-8 transition-all duration-700 ease-elegant",
+              hasEntered && !isExiting ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            )}
+            style={{ 
+              textShadow: '0 0 60px rgba(255,255,255,0.3), 0 0 120px rgba(255,255,255,0.1)',
+              transitionDelay: hasEntered ? '0.4s' : '0s'
+            }}
           >
             <span className={cn(
               "leading-none text-white tabular-nums drop-shadow-2xl",
@@ -290,7 +332,13 @@ export default function Stck() {
           </div>
 
           {/* 12h/24h toggle */}
-          <div className="flex items-center gap-1 bg-white/10 rounded-full p-1 backdrop-blur-md">
+          <div 
+            className={cn(
+              "flex items-center gap-1 bg-white/10 rounded-full p-1 backdrop-blur-md transition-all duration-700 ease-elegant",
+              hasEntered && !isExiting ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+            )}
+            style={{ transitionDelay: hasEntered ? '0.5s' : '0s' }}
+          >
             <button
               onClick={() => setIs24Hour(false)}
               className={cn(
@@ -317,7 +365,13 @@ export default function Stck() {
         </div>
 
         {/* Bottom section */}
-        <div className="p-4 md:p-6 lg:p-10">
+        <div 
+          className={cn(
+            "p-4 md:p-6 lg:p-10 transition-all duration-700 ease-elegant",
+            hasEntered && !isExiting ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          )}
+          style={{ transitionDelay: hasEntered ? '0.6s' : '0s' }}
+        >
           
           {/* Fun fact - centered */}
           <div className="flex justify-center mb-4 md:mb-8">
