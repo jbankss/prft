@@ -88,7 +88,7 @@ export function MobileNav() {
                 className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <Clock className="h-5 w-5" />
-                Clock View
+                stck
               </Link>
             </SheetClose>
             <SheetClose asChild>
