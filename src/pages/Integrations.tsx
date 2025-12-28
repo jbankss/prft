@@ -13,7 +13,6 @@ import { ShopifySetupWizard } from '@/components/integrations/ShopifySetupWizard
 import { ConnectionStatus } from '@/components/integrations/ConnectionStatus';
 import { BrandBoomSetupWizard } from '@/components/integrations/BrandBoomSetupWizard';
 import { BrandBoomConnectionStatus } from '@/components/integrations/BrandBoomConnectionStatus';
-
 type WebhookLog = {
   id: string;
   brand_id: string;
@@ -28,48 +27,42 @@ type WebhookLog = {
   accounts_created: number | null;
   created_at: string;
 };
-
 export default function Integrations() {
-  const { currentBrand } = useBrandContext();
+  const {
+    currentBrand
+  } = useBrandContext();
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
   const [isConfigured, setIsConfigured] = useState(false);
   const [shopDomain, setShopDomain] = useState<string | null>(null);
   const [lastSuccessfulWebhook, setLastSuccessfulWebhook] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
-  
+
   // BrandBoom state
   const [isBrandBoomConfigured, setIsBrandBoomConfigured] = useState(false);
   const [showBrandBoomWizard, setShowBrandBoomWizard] = useState(false);
   useEffect(() => {
     if (!currentBrand) return;
-
     const fetchData = async () => {
       // Fetch webhook logs
-      const { data: logs, error: logsError } = await supabase
-        .from('webhook_logs')
-        .select('*')
-        .eq('brand_id', currentBrand.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
+      const {
+        data: logs,
+        error: logsError
+      } = await supabase.from('webhook_logs').select('*').eq('brand_id', currentBrand.id).order('created_at', {
+        ascending: false
+      }).limit(50);
       if (logsError) {
         console.error('Error fetching webhook logs:', logsError);
         toast.error('Failed to load webhook logs');
       } else {
         setWebhookLogs(logs || []);
-        
         const lastSuccess = logs?.find(log => log.status === 'success');
         setLastSuccessfulWebhook(lastSuccess ? new Date(lastSuccess.created_at).toLocaleString() : null);
       }
 
       // Fetch Shopify integration config
-      const { data: shopifyIntegration } = await supabase
-        .from('brand_integrations')
-        .select('*')
-        .eq('brand_id', currentBrand.id)
-        .eq('integration_type', 'shopify')
-        .maybeSingle();
-
+      const {
+        data: shopifyIntegration
+      } = await supabase.from('brand_integrations').select('*').eq('brand_id', currentBrand.id).eq('integration_type', 'shopify').maybeSingle();
       if (shopifyIntegration) {
         const fullyConfigured = shopifyIntegration.is_active && !!shopifyIntegration.webhook_secret && !!shopifyIntegration.api_access_token;
         setIsConfigured(fullyConfigured);
@@ -82,13 +75,9 @@ export default function Integrations() {
       }
 
       // Fetch BrandBoom integration config
-      const { data: brandBoomIntegration } = await supabase
-        .from('brand_integrations')
-        .select('*')
-        .eq('brand_id', currentBrand.id)
-        .eq('integration_type', 'brandboom')
-        .maybeSingle();
-
+      const {
+        data: brandBoomIntegration
+      } = await supabase.from('brand_integrations').select('*').eq('brand_id', currentBrand.id).eq('integration_type', 'brandboom').maybeSingle();
       if (brandBoomIntegration) {
         const fullyConfigured = brandBoomIntegration.is_active && !!brandBoomIntegration.api_access_token;
         setIsBrandBoomConfigured(fullyConfigured);
@@ -98,49 +87,35 @@ export default function Integrations() {
         setShowBrandBoomWizard(true);
       }
     };
-
     fetchData();
 
     // Subscribe to realtime updates
-    const channel = supabase
-      .channel('webhook_logs_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'webhook_logs',
-          filter: `brand_id=eq.${currentBrand.id}`,
-        },
-        () => {
-          fetchData();
-        }
-      )
-      .subscribe();
-
+    const channel = supabase.channel('webhook_logs_changes').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'webhook_logs',
+      filter: `brand_id=eq.${currentBrand.id}`
+    }, () => {
+      fetchData();
+    }).subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
   }, [currentBrand]);
-
   const handleSetupComplete = () => {
     setIsConfigured(true);
     setShowWizard(false);
   };
-
   const handleReconfigure = () => {
     setShowWizard(true);
   };
-
   const handleBrandBoomSetupComplete = () => {
     setIsBrandBoomConfigured(true);
     setShowBrandBoomWizard(false);
   };
-
   const handleBrandBoomReconfigure = () => {
     setShowBrandBoomWizard(true);
   };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
@@ -153,7 +128,6 @@ export default function Integrations() {
         return <Clock className="h-4 w-4 text-gray-500" />;
     }
   };
-
   const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'success':
@@ -166,23 +140,17 @@ export default function Integrations() {
         return 'outline';
     }
   };
-
   if (!currentBrand) {
-    return (
-      <div className="flex items-center justify-center h-full">
+    return <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground">Please select a brand to view integrations</p>
-      </div>
-    );
+      </div>;
   }
-
-  const successCount = webhookLogs.filter((log) => log.status === 'success').length;
-  const errorCount = webhookLogs.filter((log) => log.status === 'error').length;
+  const successCount = webhookLogs.filter(log => log.status === 'success').length;
+  const errorCount = webhookLogs.filter(log => log.status === 'error').length;
   const totalInvoices = webhookLogs.reduce((sum, log) => sum + (log.invoices_created || 0), 0);
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
+        
       </div>
 
       <Tabs defaultValue="shopify" className="space-y-6">
@@ -207,19 +175,7 @@ export default function Integrations() {
 
         {/* Shopify Tab */}
         <TabsContent value="shopify" className="space-y-6">
-          {showWizard ? (
-            <ShopifySetupWizard 
-              brandId={currentBrand.id} 
-              onComplete={handleSetupComplete}
-            />
-          ) : (
-            <ConnectionStatus
-              brandId={currentBrand.id}
-              shopDomain={shopDomain}
-              lastSuccessfulWebhook={lastSuccessfulWebhook}
-              onReconfigure={handleReconfigure}
-            />
-          )}
+          {showWizard ? <ShopifySetupWizard brandId={currentBrand.id} onComplete={handleSetupComplete} /> : <ConnectionStatus brandId={currentBrand.id} shopDomain={shopDomain} lastSuccessfulWebhook={lastSuccessfulWebhook} onReconfigure={handleReconfigure} />}
         </TabsContent>
 
         {/* Activity Log Tab */}
@@ -274,14 +230,11 @@ export default function Integrations() {
               <CardDescription>Recent webhook events from your integrations</CardDescription>
             </CardHeader>
             <CardContent>
-              {webhookLogs.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+              {webhookLogs.length === 0 ? <div className="text-center py-8 text-muted-foreground">
                   <Activity className="h-12 w-12 mx-auto mb-4 opacity-30" />
                   <p>No webhook activity yet</p>
                   <p className="text-sm mt-1">Events will appear here when orders come in</p>
-                </div>
-              ) : (
-                <Table>
+                </div> : <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Status</TableHead>
@@ -291,8 +244,7 @@ export default function Integrations() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {webhookLogs.map((log) => (
-                      <Collapsible key={log.id} asChild>
+                    {webhookLogs.map(log => <Collapsible key={log.id} asChild>
                         <>
                           <CollapsibleTrigger asChild>
                             <TableRow className="cursor-pointer hover:bg-muted/50">
@@ -324,41 +276,29 @@ export default function Integrations() {
                             <TableRow>
                               <TableCell colSpan={4} className="bg-muted/30">
                                 <div className="p-4 space-y-2">
-                                  {log.shopify_order_id && (
-                                    <p className="text-sm">
+                                  {log.shopify_order_id && <p className="text-sm">
                                       <strong>Order ID:</strong> {log.shopify_order_id}
-                                    </p>
-                                  )}
-                                  {log.invoices_created !== null && (
-                                    <p className="text-sm">
+                                    </p>}
+                                  {log.invoices_created !== null && <p className="text-sm">
                                       <strong>Invoices Created:</strong> {log.invoices_created}
-                                    </p>
-                                  )}
-                                  {log.accounts_created !== null && (
-                                    <p className="text-sm">
+                                    </p>}
+                                  {log.accounts_created !== null && <p className="text-sm">
                                       <strong>Accounts Created:</strong> {log.accounts_created}
-                                    </p>
-                                  )}
-                                  {log.error_message && (
-                                    <p className="text-sm text-red-600">
+                                    </p>}
+                                  {log.error_message && <p className="text-sm text-red-600">
                                       <strong>Error:</strong> {log.error_message}
-                                    </p>
-                                  )}
-                                  {log.response_summary && (
-                                    <p className="text-sm">
+                                    </p>}
+                                  {log.response_summary && <p className="text-sm">
                                       <strong>Summary:</strong> {log.response_summary}
-                                    </p>
-                                  )}
+                                    </p>}
                                 </div>
                               </TableCell>
                             </TableRow>
                           </CollapsibleContent>
                         </>
-                      </Collapsible>
-                    ))}
+                      </Collapsible>)}
                   </TableBody>
-                </Table>
-              )}
+                </Table>}
             </CardContent>
           </Card>
         </TabsContent>
@@ -381,17 +321,7 @@ export default function Integrations() {
 
         {/* BrandBoom Tab */}
         <TabsContent value="brandboom" className="space-y-6">
-          {showBrandBoomWizard ? (
-            <BrandBoomSetupWizard 
-              brandId={currentBrand.id} 
-              onComplete={handleBrandBoomSetupComplete}
-            />
-          ) : (
-            <BrandBoomConnectionStatus
-              brandId={currentBrand.id}
-              onReconfigure={handleBrandBoomReconfigure}
-            />
-          )}
+          {showBrandBoomWizard ? <BrandBoomSetupWizard brandId={currentBrand.id} onComplete={handleBrandBoomSetupComplete} /> : <BrandBoomConnectionStatus brandId={currentBrand.id} onReconfigure={handleBrandBoomReconfigure} />}
         </TabsContent>
 
         {/* Square Tab (Coming Soon) */}
@@ -410,6 +340,5 @@ export default function Integrations() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 }
