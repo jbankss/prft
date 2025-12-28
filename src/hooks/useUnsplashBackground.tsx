@@ -28,7 +28,7 @@ interface UseUnsplashBackgroundReturn {
 }
 
 const CACHE_KEY = 'unsplash_backgrounds_cache';
-const CYCLE_INTERVAL = 50000; // 50 seconds between image swaps
+const CYCLE_INTERVAL = 300000; // 5 minutes between image swaps
 const TRANSITION_DURATION = 2000; // 2 second crossfade
 
 function getLocalHour(): number {
