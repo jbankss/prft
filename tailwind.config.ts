@@ -92,24 +92,90 @@ export default {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        "fade-out": {
+          from: { opacity: "1", transform: "translateY(0)" },
+          to: { opacity: "0", transform: "translateY(8px)" },
+        },
         "scale-in": {
           from: { opacity: "0", transform: "scale(0.95)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
+        "scale-out": {
+          from: { opacity: "1", transform: "scale(1)" },
+          to: { opacity: "0", transform: "scale(0.95)" },
+        },
         "slide-in": {
           from: { transform: "translateX(-100%)" },
           to: { transform: "translateX(0)" },
+        },
+        // Elegant page transitions
+        "page-enter": {
+          "0%": { opacity: "0", transform: "scale(1.02)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        "page-exit": {
+          "0%": { opacity: "1", transform: "scale(1)" },
+          "100%": { opacity: "0", transform: "scale(0.98)" },
+        },
+        // Stck-specific transitions - peaceful and elegant
+        "stck-enter": {
+          "0%": { opacity: "0", transform: "scale(1.05)", filter: "blur(10px)" },
+          "100%": { opacity: "1", transform: "scale(1)", filter: "blur(0px)" },
+        },
+        "stck-exit": {
+          "0%": { opacity: "1", transform: "scale(1)", filter: "blur(0px)" },
+          "100%": { opacity: "0", transform: "scale(0.95)", filter: "blur(10px)" },
+        },
+        // Staggered content reveals
+        "content-reveal": {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "content-hide": {
+          "0%": { opacity: "1", transform: "translateY(0)" },
+          "100%": { opacity: "0", transform: "translateY(-10px)" },
+        },
+        // Subtle float for peaceful feel
+        "gentle-float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-4px)" },
+        },
+        // Breathe animation for living UI elements
+        "breathe": {
+          "0%, 100%": { opacity: "0.7", transform: "scale(1)" },
+          "50%": { opacity: "1", transform: "scale(1.02)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         "accordion-up": "accordion-up 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         "fade-in": "fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        "fade-out": "fade-out 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         "scale-in": "scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        "scale-out": "scale-out 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         "slide-in": "slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        // Page transitions
+        "page-enter": "page-enter 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+        "page-exit": "page-exit 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        // Stck elegant transitions - longer for peaceful feel
+        "stck-enter": "stck-enter 0.8s cubic-bezier(0.22, 1, 0.36, 1)",
+        "stck-exit": "stck-exit 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+        // Content reveals with stagger support
+        "content-reveal": "content-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+        "content-hide": "content-hide 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+        // Ambient animations
+        "gentle-float": "gentle-float 6s ease-in-out infinite",
+        "breathe": "breathe 4s ease-in-out infinite",
       },
       transitionTimingFunction: {
         'apple': 'cubic-bezier(0.4, 0, 0.2, 1)',
+        'elegant': 'cubic-bezier(0.22, 1, 0.36, 1)',
+        'soft': 'cubic-bezier(0.4, 0, 0.6, 1)',
+      },
+      transitionDuration: {
+        'slow': '600ms',
+        'slower': '800ms',
+        'slowest': '1000ms',
       },
     },
   },
