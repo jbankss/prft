@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { BrandSwitcher } from './BrandSwitcher';
 import { UserProfileDropdown } from './UserProfileDropdown';
 import { useBrandContext } from '@/hooks/useBrandContext';
+import { MobileNav } from './MobileNav';
 
 const navItems = [
   { label: 'Home', path: '/' },
@@ -22,29 +23,32 @@ export function TopNav() {
 
   return (
     <header className="border-b border-border/40 bg-background/95 backdrop-blur-sm">
-      <div className="flex items-center h-16 px-8">
+      <div className="flex items-center h-14 md:h-16 px-4 md:px-8">
+        {/* Mobile: Hamburger Menu */}
+        <MobileNav />
+
         {/* Logo */}
-        <div className="flex items-center gap-3 mr-10">
+        <div className="flex items-center gap-3 md:mr-10 flex-1 md:flex-none justify-center md:justify-start">
           {currentBrand?.logo_url ? (
             <img
               src={currentBrand.logo_url}
               alt={currentBrand.name}
-              className="h-10 w-auto max-w-[180px] object-contain"
+              className="h-8 md:h-10 w-auto max-w-[140px] md:max-w-[180px] object-contain"
             />
           ) : (
             <>
-              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-                <Zap className="w-5 h-5 text-primary-foreground" />
+              <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-primary flex items-center justify-center">
+                <Zap className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-display font-semibold text-foreground tracking-tight">
+              <span className="text-lg md:text-xl font-display font-semibold text-foreground tracking-tight hidden sm:inline">
                 {currentBrand?.name || 'MJ Fashion'}
               </span>
             </>
           )}
         </div>
 
-        {/* Navigation */}
-        <nav className="flex items-center gap-0.5 flex-1">
+        {/* Desktop Navigation - hidden on mobile */}
+        <nav className="hidden md:flex items-center gap-0.5 flex-1">
           {navItems.map(item => {
             const isActive = location.pathname === item.path;
             return (
@@ -71,8 +75,8 @@ export function TopNav() {
           })}
         </nav>
 
-        {/* Right side */}
-        <div className="flex items-center gap-2">
+        {/* Desktop Right side - hidden on mobile */}
+        <div className="hidden md:flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
@@ -90,6 +94,11 @@ export function TopNav() {
             <Store className="h-4 w-4" />
           </Button>
           <BrandSwitcher />
+          <UserProfileDropdown />
+        </div>
+
+        {/* Mobile: User profile only (hamburger has rest) */}
+        <div className="md:hidden">
           <UserProfileDropdown />
         </div>
       </div>

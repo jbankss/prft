@@ -44,11 +44,11 @@ export default function Dashboard() {
     : `Revenue Trend (Last ${daysDiff + 1} Days)`;
 
   return (
-    <div className="space-y-8 max-w-[1600px]">
+    <div className="space-y-6 md:space-y-8 max-w-[1600px]">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
-          <h1 className="font-display font-semibold text-4xl">
+          <h1 className="font-display font-semibold text-2xl md:text-4xl">
             {firstName ? `Welcome, ${firstName}` : 'Welcome'}
           </h1>
         </div>
@@ -64,7 +64,7 @@ export default function Dashboard() {
       />
 
       {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Left Column - Revenue Chart */}
         <div className="lg:col-span-2">
           <RevenueTrendChart
@@ -87,20 +87,20 @@ export default function Dashboard() {
 
       {/* Bottom Grid - Equal height cards */}
       <div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
         style={{ gridAutoRows: '1fr' }}
       >
-        <div className="min-h-[480px]">
+        <div className="min-h-[320px] md:min-h-[480px]">
           <TopVendorsLeaderboard vendors={metrics.topVendors} />
         </div>
-        <div className="min-h-[480px]">
+        <div className="min-h-[320px] md:min-h-[480px]">
           <SalesChannelBreakdown
             pos={metrics.salesChannels.pos}
             online={metrics.salesChannels.online}
             tiktok={metrics.salesChannels.tiktok}
           />
         </div>
-        <div className="min-h-[480px]">
+        <div className="min-h-[320px] md:min-h-[480px] md:col-span-2 lg:col-span-1">
           <RecentOrdersFeed orders={metrics.recentOrders} />
         </div>
       </div>
