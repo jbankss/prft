@@ -6,10 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBrandContext } from '@/hooks/useBrandContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { PaymentDetailsDialog } from '@/components/payments/PaymentDetailsDialog';
-import { Search, FileText, Calendar, DollarSign, Filter } from 'lucide-react';
+import { Search, FileText, Calendar, DollarSign, Filter, ChevronRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 export default function Payments() {
+  const isMobile = useIsMobile();
   const {
     currentBrand
   } = useBrandContext();
@@ -68,54 +71,58 @@ export default function Payments() {
   if (isLoading) {
     return <div className="flex justify-center p-12">Loading...</div>;
   }
-  return <div className="space-y-6 p-6">
+
+  return <div className="space-y-4 md:space-y-6 p-4 md:p-6">
       <div>
-        <h1 className="text-3xl font-bold">Payments</h1>
-        
+        <h1 className="text-2xl md:text-3xl font-bold">Payments</h1>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-            <DollarSign className="w-4 h-4" />
-            <span>Total Amount</span>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <Card className="p-3 md:p-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs md:text-sm mb-1">
+            <DollarSign className="w-3 h-3 md:w-4 md:h-4" />
+            <span>Total</span>
           </div>
-          <div className="text-2xl font-bold">${totalAmount.toLocaleString('en-US', {
-            minimumFractionDigits: 2
+          <div className="text-lg md:text-2xl font-bold">${totalAmount.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
           })}</div>
         </Card>
-        <Card className="p-4 border-l-4 border-green-500">
-          <div className="text-muted-foreground text-sm mb-1">Cleared</div>
-          <div className="text-2xl font-bold text-green-600">${clearedAmount.toLocaleString('en-US', {
-            minimumFractionDigits: 2
+        <Card className="p-3 md:p-4 border-l-4 border-green-500">
+          <div className="text-muted-foreground text-xs md:text-sm mb-1">Cleared</div>
+          <div className="text-lg md:text-2xl font-bold text-green-600">${clearedAmount.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
           })}</div>
         </Card>
-        <Card className="p-4 border-l-4 border-blue-500">
-          <div className="text-muted-foreground text-sm mb-1">Submitted</div>
-          <div className="text-2xl font-bold text-blue-600">${submittedAmount.toLocaleString('en-US', {
-            minimumFractionDigits: 2
+        <Card className="p-3 md:p-4 border-l-4 border-blue-500">
+          <div className="text-muted-foreground text-xs md:text-sm mb-1">Submitted</div>
+          <div className="text-lg md:text-2xl font-bold text-blue-600">${submittedAmount.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
           })}</div>
         </Card>
-        <Card className="p-4 border-l-4 border-yellow-500">
-          <div className="text-muted-foreground text-sm mb-1">Upcoming</div>
-          <div className="text-2xl font-bold text-yellow-600">${upcomingAmount.toLocaleString('en-US', {
-            minimumFractionDigits: 2
+        <Card className="p-3 md:p-4 border-l-4 border-yellow-500">
+          <div className="text-muted-foreground text-xs md:text-sm mb-1">Upcoming</div>
+          <div className="text-lg md:text-2xl font-bold text-yellow-600">${upcomingAmount.toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
           })}</div>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-4">
+      <Card className="p-3 md:p-4">
+        <div className="flex flex-col md:flex-row gap-3 md:gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input placeholder="Search by invoice number, transaction ID, or notes..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
+            <Input placeholder="Search payments..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
           </div>
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -129,81 +136,128 @@ export default function Payments() {
         </div>
       </Card>
 
-      {/* Payments List */}
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr className="border-b">
-                <th className="text-left p-4 font-medium text-sm">Invoice #</th>
-                <th className="text-left p-4 font-medium text-sm">Date</th>
-                <th className="text-left p-4 font-medium text-sm">Amount</th>
-                <th className="text-left p-4 font-medium text-sm">Method</th>
-                <th className="text-left p-4 font-medium text-sm">Status</th>
-                <th className="text-left p-4 font-medium text-sm">Attachments</th>
-                <th className="text-left p-4 font-medium text-sm">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPayments && filteredPayments.length > 0 ? filteredPayments.map(payment => <tr key={payment.id} className="border-b hover:bg-muted/30 transition-colors">
-                    <td className="p-4">
-                      <div className="font-medium">{payment.invoice_number || '—'}</div>
-                      {payment.transaction_id && <div className="text-xs text-muted-foreground">{payment.transaction_id}</div>}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        {new Date(payment.payment_date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="font-semibold text-lg">
-                        ${Number(payment.amount).toLocaleString('en-US', {
-                    minimumFractionDigits: 2
-                  })}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="text-sm text-muted-foreground">
-                        {payment.payment_method || '—'}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <Badge variant="outline" className={getStatusColor(payment.status)}>
-                        {getStatusLabel(payment.status)}
-                      </Badge>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-1">
-                        {payment.attachments && Array.isArray(payment.attachments) && payment.attachments.length > 0 ? <>
-                            <FileText className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">
-                              {payment.attachments.length} file{payment.attachments.length !== 1 ? 's' : ''}
-                            </span>
-                          </> : <span className="text-sm text-muted-foreground">—</span>}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <Button variant="outline" size="sm" onClick={() => {
+      {/* Mobile: Card view */}
+      {isMobile ? (
+        <div className="space-y-3">
+          {filteredPayments && filteredPayments.length > 0 ? (
+            filteredPayments.map(payment => (
+              <Card 
+                key={payment.id} 
+                className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => {
                   setSelectedPayment(payment);
                   setDialogOpen(true);
-                }}>
-                        View Details
-                      </Button>
-                    </td>
-                  </tr>) : <tr>
-                  <td colSpan={7} className="p-12 text-center text-muted-foreground">
-                    No payments found
-                  </td>
-                </tr>}
-            </tbody>
-          </table>
+                }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-medium">{payment.invoice_number || '—'}</div>
+                  <Badge variant="outline" className={getStatusColor(payment.status)}>
+                    {getStatusLabel(payment.status)}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(payment.payment_date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </div>
+                  <div className="font-semibold">
+                    ${Number(payment.amount).toLocaleString('en-US', {
+                      minimumFractionDigits: 2
+                    })}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                  <span>{payment.payment_method || '—'}</span>
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              No payments found
+            </div>
+          )}
         </div>
-      </Card>
+      ) : (
+        /* Desktop: Table view */
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr className="border-b">
+                  <th className="text-left p-4 font-medium text-sm">Invoice #</th>
+                  <th className="text-left p-4 font-medium text-sm">Date</th>
+                  <th className="text-left p-4 font-medium text-sm">Amount</th>
+                  <th className="text-left p-4 font-medium text-sm">Method</th>
+                  <th className="text-left p-4 font-medium text-sm">Status</th>
+                  <th className="text-left p-4 font-medium text-sm">Attachments</th>
+                  <th className="text-left p-4 font-medium text-sm">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPayments && filteredPayments.length > 0 ? filteredPayments.map(payment => <tr key={payment.id} className="border-b hover:bg-muted/30 transition-colors">
+                      <td className="p-4">
+                        <div className="font-medium">{payment.invoice_number || '—'}</div>
+                        {payment.transaction_id && <div className="text-xs text-muted-foreground">{payment.transaction_id}</div>}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                          {new Date(payment.payment_date).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="font-semibold text-lg">
+                          ${Number(payment.amount).toLocaleString('en-US', {
+                      minimumFractionDigits: 2
+                    })}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="text-sm text-muted-foreground">
+                          {payment.payment_method || '—'}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <Badge variant="outline" className={getStatusColor(payment.status)}>
+                          {getStatusLabel(payment.status)}
+                        </Badge>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-1">
+                          {payment.attachments && Array.isArray(payment.attachments) && payment.attachments.length > 0 ? <>
+                              <FileText className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">
+                                {payment.attachments.length} file{payment.attachments.length !== 1 ? 's' : ''}
+                              </span>
+                            </> : <span className="text-sm text-muted-foreground">—</span>}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <Button variant="outline" size="sm" onClick={() => {
+                    setSelectedPayment(payment);
+                    setDialogOpen(true);
+                  }}>
+                          View Details
+                        </Button>
+                      </td>
+                    </tr>) : <tr>
+                    <td colSpan={7} className="p-12 text-center text-muted-foreground">
+                      No payments found
+                    </td>
+                  </tr>}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       {selectedPayment && <PaymentDetailsDialog payment={selectedPayment} open={dialogOpen} onOpenChange={setDialogOpen} onSuccess={refetch} />}
     </div>;

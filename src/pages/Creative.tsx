@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useBrandContext } from '@/hooks/useBrandContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FolderOpen } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Search, FolderOpen, Upload, BarChart3, HardDrive, LayoutGrid, Image } from 'lucide-react';
 import { AssetList } from '@/components/creative/AssetList';
 import { CollectionsView } from '@/components/creative/CollectionsView';
 import { CreativeSidebar } from '@/components/creative/CreativeSidebar';
@@ -14,7 +16,9 @@ import { EnhancedAssetLightbox } from '@/components/creative/EnhancedAssetLightb
 import { StorageView } from '@/components/creative/StorageView';
 import { AnalyticsView } from '@/components/creative/AnalyticsView';
 import { toast } from 'sonner';
+
 export default function Creative() {
+  const isMobile = useIsMobile();
   const {
     currentBrand
   } = useBrandContext();
@@ -97,21 +101,48 @@ export default function Creative() {
   const recentCount = assets.filter(asset => new Date(asset.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length;
   if (loading) {
     return <div className="flex h-screen">
-        <CreativeSidebar activeView={activeView} onViewChange={setActiveView} />
+        {/* Desktop sidebar */}
+        {!isMobile && <CreativeSidebar activeView={activeView} onViewChange={setActiveView} />}
         <div className="flex-1 flex items-center justify-center">
           <div className="animate-pulse text-muted-foreground">Loading...</div>
         </div>
       </div>;
   }
+
   return <div className="flex h-[calc(100vh-4rem)] bg-background">
-      <CreativeSidebar activeView={activeView} onViewChange={setActiveView} />
+      {/* Desktop: Show sidebar */}
+      {!isMobile && <CreativeSidebar activeView={activeView} onViewChange={setActiveView} />}
       
       <main className="flex-1 overflow-auto">
-        <div className="p-12 space-y-8">
+        <div className="p-4 md:p-8 lg:p-12 space-y-6 md:space-y-8">
+          {/* Mobile: Tab navigation */}
+          {isMobile && (
+            <Tabs value={activeView} onValueChange={(v) => setActiveView(v as typeof activeView)} className="w-full">
+              <TabsList className="w-full grid grid-cols-4 h-auto">
+                <TabsTrigger value="overview" className="flex flex-col gap-1 py-2">
+                  <LayoutGrid className="h-4 w-4" />
+                  <span className="text-[10px]">Overview</span>
+                </TabsTrigger>
+                <TabsTrigger value="assets" className="flex flex-col gap-1 py-2">
+                  <Image className="h-4 w-4" />
+                  <span className="text-[10px]">Assets</span>
+                </TabsTrigger>
+                <TabsTrigger value="upload" className="flex flex-col gap-1 py-2">
+                  <Upload className="h-4 w-4" />
+                  <span className="text-[10px]">Upload</span>
+                </TabsTrigger>
+                <TabsTrigger value="collections" className="flex flex-col gap-1 py-2">
+                  <FolderOpen className="h-4 w-4" />
+                  <span className="text-[10px]">Collections</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-5xl font-display font-semibold mb-2">
+              <h1 className="text-3xl md:text-5xl font-display font-semibold mb-2">
                 {activeView === 'overview' && 'Creative Studio'}
                 {activeView === 'assets' && 'Assets'}
                 {activeView === 'upload' && 'Upload'}
@@ -124,13 +155,13 @@ export default function Creative() {
           </div>
 
           {/* Overview */}
-          {activeView === 'overview' && <div className="space-y-8">
+          {activeView === 'overview' && <div className="space-y-6 md:space-y-8">
               <CreativeWidgets totalAssets={assets.length} storageUsed={usedStorage} storageTotal={totalStorage} recentCount={recentCount} />
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+                <div className="space-y-4 md:space-y-6">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-display font-semibold">Recent Assets</h2>
+                    <h2 className="text-xl md:text-2xl font-display font-semibold">Recent Assets</h2>
                     <button onClick={() => setActiveView('assets')} className="text-sm text-primary hover:underline font-medium">
                       See all →
                     </button>
@@ -138,18 +169,18 @@ export default function Creative() {
                   <AssetList assets={assets.slice(0, 5)} onRefresh={fetchAssets} selectedIds={[]} />
                 </div>
 
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-display font-semibold">Quick Actions</h2>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => setActiveView('upload')} className="p-8 bg-card border border-border rounded-3xl hover:bg-muted/50 transition-colors text-left">
-                      <Search className="h-10 w-10 mb-4 text-primary" />
-                      <h3 className="font-semibold mb-1 text-lg">Upload Files</h3>
-                      <p className="text-sm text-muted-foreground">Add new assets</p>
+                <div className="space-y-4 md:space-y-6">
+                  <h2 className="text-xl md:text-2xl font-display font-semibold">Quick Actions</h2>
+                  <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <button onClick={() => setActiveView('upload')} className="p-4 md:p-8 bg-card border border-border rounded-2xl md:rounded-3xl hover:bg-muted/50 transition-colors text-left">
+                      <Search className="h-8 w-8 md:h-10 md:w-10 mb-3 md:mb-4 text-primary" />
+                      <h3 className="font-semibold mb-1 text-base md:text-lg">Upload Files</h3>
+                      <p className="text-xs md:text-sm text-muted-foreground">Add new assets</p>
                     </button>
-                    <button onClick={() => setActiveView('collections')} className="p-8 bg-card border border-border rounded-3xl hover:bg-muted/50 transition-colors text-left">
-                      <FolderOpen className="h-10 w-10 mb-4 text-primary" />
-                      <h3 className="font-semibold mb-1 text-lg">Collections</h3>
-                      <p className="text-sm text-muted-foreground">Organize assets</p>
+                    <button onClick={() => setActiveView('collections')} className="p-4 md:p-8 bg-card border border-border rounded-2xl md:rounded-3xl hover:bg-muted/50 transition-colors text-left">
+                      <FolderOpen className="h-8 w-8 md:h-10 md:w-10 mb-3 md:mb-4 text-primary" />
+                      <h3 className="font-semibold mb-1 text-base md:text-lg">Collections</h3>
+                      <p className="text-xs md:text-sm text-muted-foreground">Organize assets</p>
                     </button>
                   </div>
                 </div>
@@ -158,7 +189,7 @@ export default function Creative() {
 
           {/* Assets View */}
           {activeView === 'assets' && <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input placeholder="Search assets..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
@@ -193,9 +224,9 @@ export default function Creative() {
                 </Select>
               </div>
 
-              {filteredAssets.length === 0 ? <div className="text-center py-12 bg-card rounded-xl border border-border">
-                  <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">
+              {filteredAssets.length === 0 ? <div className="text-center py-8 md:py-12 bg-card rounded-xl border border-border">
+                  <FolderOpen className="h-10 w-10 md:h-12 md:w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground mb-4 text-sm md:text-base">
                     {searchQuery ? 'No assets found matching your search' : 'No assets yet. Upload your first asset to get started.'}
                   </p>
                 </div> : <AssetList assets={filteredAssets} onRefresh={fetchAssets} selectedIds={selectedIds} onToggleSelect={toggleSelectAsset} />}

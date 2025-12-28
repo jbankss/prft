@@ -6,6 +6,7 @@ import { useStckMetrics } from '@/hooks/useStckMetrics';
 import { useAuth } from '@/hooks/useAuth';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { useUnsplashBackground } from '@/hooks/useUnsplashBackground';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 const TIME_GREETINGS = {
@@ -77,6 +78,7 @@ export default function Stck() {
   const { currentBrand } = useBrandContext();
   const { funFacts, newOrder, recentOrders } = useStckMetrics();
   const { currentImage, nextImage, isTransitioning } = useUnsplashBackground();
+  const isMobile = useIsMobile();
   
   const [time, setTime] = useState(new Date());
   const [is24Hour, setIs24Hour] = useState(() => {
@@ -146,7 +148,7 @@ export default function Stck() {
 
   // Exit on key press
   const handleExit = useCallback(() => {
-    navigate('/dashboard');
+    navigate('/');
   }, [navigate]);
 
   useEffect(() => {
@@ -251,35 +253,53 @@ export default function Stck() {
 
           {/* Date */}
           <div className="mb-4">
-            <span className="text-sm font-medium tracking-widest uppercase text-white/50">
-              {format(time, 'EEEE, MMMM d, yyyy')}
+            <span className="text-xs md:text-sm font-medium tracking-widest uppercase text-white/50">
+              {format(time, isMobile ? 'EEE, MMM d' : 'EEEE, MMMM d, yyyy')}
             </span>
           </div>
 
           {/* Giant clock */}
           <div 
-            className="flex items-baseline font-bold tracking-tighter mb-8"
+            className="flex items-baseline font-bold tracking-tighter mb-6 md:mb-8"
             style={{ textShadow: '0 0 60px rgba(255,255,255,0.3), 0 0 120px rgba(255,255,255,0.1)' }}
           >
-            <span className="text-[16rem] lg:text-[20rem] leading-none text-white tabular-nums drop-shadow-2xl">
+            <span className={cn(
+              "leading-none text-white tabular-nums drop-shadow-2xl",
+              isMobile ? "text-[5rem]" : "text-[16rem] lg:text-[20rem]"
+            )}>
               {formatHour(hours)}
             </span>
-            <span className="text-[12rem] lg:text-[16rem] leading-none text-white/40 mx-2 animate-pulse">
+            <span className={cn(
+              "leading-none text-white/40 mx-1 md:mx-2 animate-pulse",
+              isMobile ? "text-[4rem]" : "text-[12rem] lg:text-[16rem]"
+            )}>
               :
             </span>
-            <span className="text-[16rem] lg:text-[20rem] leading-none text-white tabular-nums drop-shadow-2xl">
+            <span className={cn(
+              "leading-none text-white tabular-nums drop-shadow-2xl",
+              isMobile ? "text-[5rem]" : "text-[16rem] lg:text-[20rem]"
+            )}>
               {minutes.toString().padStart(2, '0')}
             </span>
-            <div className="flex flex-col ml-6 gap-1">
-              <span className="text-[3rem] lg:text-[4rem] leading-none text-white/50 tabular-nums font-medium">
-                {seconds.toString().padStart(2, '0')}
-              </span>
-              {!is24Hour && (
-                <span className="text-lg font-medium text-white/40 tracking-wider">
-                  {amPm}
+            {/* Seconds + AM/PM - hidden on mobile */}
+            {!isMobile && (
+              <div className="flex flex-col ml-6 gap-1">
+                <span className="text-[3rem] lg:text-[4rem] leading-none text-white/50 tabular-nums font-medium">
+                  {seconds.toString().padStart(2, '0')}
                 </span>
-              )}
-            </div>
+                {!is24Hour && (
+                  <span className="text-lg font-medium text-white/40 tracking-wider">
+                    {amPm}
+                  </span>
+                )}
+              </div>
+            )}
+            {/* Mobile: Just AM/PM */}
+            {isMobile && !is24Hour && (
+              <span className="text-sm font-medium text-white/40 tracking-wider ml-2 self-center">
+                {amPm}
+              </span>
+            )}
           </div>
 
           {/* 12h/24h toggle */}
@@ -310,82 +330,90 @@ export default function Stck() {
         </div>
 
         {/* Bottom section */}
-        <div className="p-6 lg:p-10">
+        <div className="p-4 md:p-6 lg:p-10">
           
           {/* Fun fact - centered */}
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-4 md:mb-8">
             <div
               className={cn(
-                'flex items-center gap-4 px-8 py-4 bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 transition-all duration-500',
+                'flex items-center gap-2 md:gap-4 px-4 md:px-8 py-3 md:py-4 bg-black/30 backdrop-blur-md rounded-xl md:rounded-2xl border border-white/10 transition-all duration-500 max-w-full',
                 factVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
               )}
             >
-              <span className="text-2xl">{currentFact?.emoji}</span>
-              <span className="text-sm font-medium text-white/80">
+              <span className="text-xl md:text-2xl">{currentFact?.emoji}</span>
+              <span className="text-xs md:text-sm font-medium text-white/80 line-clamp-2">
                 {currentFact?.text}
               </span>
             </div>
           </div>
 
-          {/* Bottom row - Attribution left, Recent orders right */}
-          <div className="flex items-end justify-between">
+          {/* Bottom row - Attribution left, Recent orders right (desktop only) */}
+          <div className={cn(
+            "flex items-end",
+            isMobile ? "justify-center" : "justify-between"
+          )}>
             
-            {/* Photo attribution (left) - Unsplash requirement */}
+            {/* Photo attribution - Unsplash requirement */}
             {currentImage && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-black/40 backdrop-blur-sm rounded-lg">
+              <div className={cn(
+                "flex items-center gap-2 px-3 py-2 bg-black/40 backdrop-blur-sm rounded-lg",
+                isMobile && "text-center"
+              )}>
                 <Camera className="h-3 w-3 text-white/50" />
-                <span className="text-white/50 text-xs">Photo by</span>
+                <span className="text-white/50 text-[10px] md:text-xs">Photo by</span>
                 <a 
                   href={currentImage.photographerUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white/80 text-xs font-medium hover:text-white hover:underline transition-colors"
+                  className="text-white/80 text-[10px] md:text-xs font-medium hover:text-white hover:underline transition-colors"
                 >
                   {currentImage.photographer}
                 </a>
-                <span className="text-[10px] text-white/20">on</span>
+                <span className="text-[8px] md:text-[10px] text-white/20">on</span>
                 <a 
                   href={currentImage.unsplashUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white/80 text-xs font-medium hover:text-white hover:underline transition-colors"
+                  className="text-white/80 text-[10px] md:text-xs font-medium hover:text-white hover:underline transition-colors"
                 >
                   Unsplash
                 </a>
               </div>
             )}
 
-            {/* Recent orders + New order notification (right) */}
-            <div className="flex items-end gap-6">
-              {/* Recent orders */}
-              <div className="flex flex-col gap-2 opacity-50 hover:opacity-80 transition-opacity duration-300">
-                <span className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Recent Orders</span>
-                {recentOrders.slice(0, 3).map((order) => (
-                  <div key={order.id} className="text-xs text-white/70 flex items-center gap-2">
-                    <span className="font-medium">#{order.order_number}</span>
-                    <span className="text-white/30">•</span>
-                    <span>${order.total_amount?.toFixed(0)}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* New order notification */}
-              {newOrder && (
-                <div className="animate-in slide-in-from-right-5 duration-500">
-                  <div className="flex items-center gap-4 px-5 py-4 bg-white text-black rounded-2xl shadow-xl">
-                    <div className="p-2 bg-black/10 rounded-xl">
-                      <Package className="h-5 w-5" />
+            {/* Recent orders + New order notification (right) - Desktop only */}
+            {!isMobile && (
+              <div className="flex items-end gap-6">
+                {/* Recent orders */}
+                <div className="flex flex-col gap-2 opacity-50 hover:opacity-80 transition-opacity duration-300">
+                  <span className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Recent Orders</span>
+                  {recentOrders.slice(0, 3).map((order) => (
+                    <div key={order.id} className="text-xs text-white/70 flex items-center gap-2">
+                      <span className="font-medium">#{order.order_number}</span>
+                      <span className="text-white/30">•</span>
+                      <span>${order.total_amount?.toFixed(0)}</span>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold">New Order</span>
-                      <span className="text-xs opacity-70">
-                        #{newOrder.order_number} • ${newOrder.total_amount?.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              )}
-            </div>
+
+                {/* New order notification */}
+                {newOrder && (
+                  <div className="animate-in slide-in-from-right-5 duration-500">
+                    <div className="flex items-center gap-4 px-5 py-4 bg-white text-black rounded-2xl shadow-xl">
+                      <div className="p-2 bg-black/10 rounded-xl">
+                        <Package className="h-5 w-5" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold">New Order</span>
+                        <span className="text-xs opacity-70">
+                          #{newOrder.order_number} • ${newOrder.total_amount?.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
