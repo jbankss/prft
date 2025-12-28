@@ -25,6 +25,7 @@ import Reports from "./pages/Reports";
 import Connect from "./pages/Connect";
 import StoreSettings from "./pages/StoreSettings";
 import UserSettings from "./pages/UserSettings";
+import Stck from "./pages/Stck";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
                 <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
                 <Route path="/store-settings" element={<MainLayout><StoreSettings /></MainLayout>} />
                 <Route path="/user-settings" element={<MainLayout><UserSettings /></MainLayout>} />
+                <Route path="/stck" element={<Stck />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
