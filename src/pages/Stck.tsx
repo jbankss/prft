@@ -13,26 +13,36 @@ const TIME_GREETINGS = {
     "Early bird gets the worm",
     "Rise and grind",
     "The world is quiet, let's make moves",
+    "Nobody else is awake, let's get rich",
+    "Sleep is for closers... wait",
   ],
   morning: [
     "Good morning",
     "Fresh start today",
     "Let's make today count",
+    "Coffee's hot, orders are hotter",
+    "Time to stack some paper",
   ],
   afternoon: [
     "Good afternoon",
     "Keep the momentum going",
     "Halfway through, staying strong",
+    "Money printer go brrr",
+    "Crushing it, one order at a time",
   ],
   evening: [
     "Good evening",
     "Wrapping up nicely",
     "Another day, another win",
+    "Almost quittin' time... but not yet",
+    "Evening orders hit different",
   ],
   night: [
     "Burning the midnight oil",
     "Night owl mode activated",
     "The quiet hours are for building",
+    "While they sleep, we ship",
+    "Nocturnal and profitable",
   ],
 };
 
@@ -103,14 +113,14 @@ export default function Stck() {
     return () => clearInterval(interval);
   }, []);
 
-  // Update greeting every hour
+  // Update greeting every 20 minutes
   useEffect(() => {
-    const checkHour = () => {
+    const checkGreeting = () => {
       const currentHour = new Date().getHours();
       setGreetingData(getTimeGreeting(currentHour));
     };
     
-    const interval = setInterval(checkHour, 60000); // Check every minute
+    const interval = setInterval(checkGreeting, 1200000); // 20 minutes
     return () => clearInterval(interval);
   }, []);
 
@@ -136,7 +146,7 @@ export default function Stck() {
 
   // Exit on key press
   const handleExit = useCallback(() => {
-    navigate(-1);
+    navigate('/dashboard');
   }, [navigate]);
 
   useEffect(() => {
@@ -209,6 +219,7 @@ export default function Stck() {
                 src={currentBrand.logo_url} 
                 alt={currentBrand.name} 
                 className="h-10 w-auto object-contain opacity-90 drop-shadow-lg"
+                style={{ filter: 'brightness(0) invert(1)' }}
               />
             ) : currentBrand?.name ? (
               <div className="flex items-center gap-2 text-white/70">
@@ -246,7 +257,10 @@ export default function Stck() {
           </div>
 
           {/* Giant clock */}
-          <div className="flex items-baseline font-bold tracking-tighter mb-8">
+          <div 
+            className="flex items-baseline font-bold tracking-tighter mb-8"
+            style={{ textShadow: '0 0 60px rgba(255,255,255,0.3), 0 0 120px rgba(255,255,255,0.1)' }}
+          >
             <span className="text-[16rem] lg:text-[20rem] leading-none text-white tabular-nums drop-shadow-2xl">
               {formatHour(hours)}
             </span>
@@ -313,7 +327,7 @@ export default function Stck() {
             </div>
           </div>
 
-          {/* Bottom row - Attribution, Recent orders and new order notification */}
+          {/* Bottom row - Attribution left, Recent orders right */}
           <div className="flex items-end justify-between">
             
             {/* Photo attribution (left) - Unsplash requirement */}
@@ -329,7 +343,7 @@ export default function Stck() {
                 >
                   {currentImage.photographer}
                 </a>
-                <span className="text-white/30">on</span>
+                <span className="text-[10px] text-white/20">on</span>
                 <a 
                   href={currentImage.unsplashUrl}
                   target="_blank"
@@ -340,37 +354,38 @@ export default function Stck() {
                 </a>
               </div>
             )}
-            
-            {/* Recent orders (center) */}
-            <div className="flex flex-col gap-2 opacity-50 hover:opacity-80 transition-opacity duration-300 mx-auto">
-              <span className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Recent Orders</span>
-              {recentOrders.slice(0, 3).map((order) => (
-                <div key={order.id} className="text-xs text-white/70 flex items-center gap-2">
-                  <span className="font-medium">#{order.order_number}</span>
-                  <span className="text-white/30">•</span>
-                  <span>${order.total_amount?.toFixed(0)}</span>
-                </div>
-              ))}
-            </div>
 
-            {/* New order notification (right) */}
-            {newOrder ? (
-              <div className="animate-in slide-in-from-right-5 duration-500">
-                <div className="flex items-center gap-4 px-5 py-4 bg-white text-black rounded-2xl shadow-xl">
-                  <div className="p-2 bg-black/10 rounded-xl">
-                    <Package className="h-5 w-5" />
+            {/* Recent orders + New order notification (right) */}
+            <div className="flex items-end gap-6">
+              {/* Recent orders */}
+              <div className="flex flex-col gap-2 opacity-50 hover:opacity-80 transition-opacity duration-300">
+                <span className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Recent Orders</span>
+                {recentOrders.slice(0, 3).map((order) => (
+                  <div key={order.id} className="text-xs text-white/70 flex items-center gap-2">
+                    <span className="font-medium">#{order.order_number}</span>
+                    <span className="text-white/30">•</span>
+                    <span>${order.total_amount?.toFixed(0)}</span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold">New Order</span>
-                    <span className="text-xs opacity-70">
-                      #{newOrder.order_number} • ${newOrder.total_amount?.toFixed(2)}
-                    </span>
+                ))}
+              </div>
+
+              {/* New order notification */}
+              {newOrder && (
+                <div className="animate-in slide-in-from-right-5 duration-500">
+                  <div className="flex items-center gap-4 px-5 py-4 bg-white text-black rounded-2xl shadow-xl">
+                    <div className="p-2 bg-black/10 rounded-xl">
+                      <Package className="h-5 w-5" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold">New Order</span>
+                      <span className="text-xs opacity-70">
+                        #{newOrder.order_number} • ${newOrder.total_amount?.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="w-[200px]" /> // Spacer to balance layout
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
