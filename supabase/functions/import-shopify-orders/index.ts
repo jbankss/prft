@@ -483,7 +483,8 @@ async function runChunkedImport(
               raw_data: { 
                 order_name: order.name,
                 fulfillment_status: order.fulfillment_status,
-                financial_status: order.financial_status
+                financial_status: order.financial_status,
+                source_name: order.source_name
               },
             });
 

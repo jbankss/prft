@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useBrandContext } from './useBrandContext';
 import { useAuth } from './useAuth';
-import { startOfDay, endOfDay, subDays, startOfWeek, startOfMonth, format, eachDayOfInterval } from 'date-fns';
+import { startOfDay, endOfDay, subDays, startOfWeek, startOfMonth, format, eachDayOfInterval, eachHourOfInterval, isSameDay } from 'date-fns';
 
 export interface DashboardMetrics {
   userName: string | null;
@@ -136,23 +136,53 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
       const pendingPayments = (accounts || [])
         .reduce((sum, a) => sum + Number(a.manual_balance || 0), 0);
 
-      // Daily revenue for date range
-      const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
-      const dailyRevenueMap = new Map<string, number>();
-      days.forEach(day => {
-        dailyRevenueMap.set(format(day, 'yyyy-MM-dd'), 0);
-      });
+      // Check if single day selection (for hourly view)
+      const isSingleDay = isSameDay(rangeStart, rangeEnd);
+      
+      let dailyRevenue: { date: string; amount: number }[];
+      
+      if (isSingleDay) {
+        // Hourly view for single day
+        const hours = eachHourOfInterval({ 
+          start: startOfDay(rangeStart), 
+          end: endOfDay(rangeEnd) 
+        });
+        const hourlyRevenueMap = new Map<string, number>();
+        hours.forEach(hour => {
+          hourlyRevenueMap.set(format(hour, 'HH:mm'), 0);
+        });
 
-      ordersInRange.forEach(o => {
-        const date = format(new Date(o.order_date), 'yyyy-MM-dd');
-        if (dailyRevenueMap.has(date)) {
-          dailyRevenueMap.set(date, dailyRevenueMap.get(date)! + Number(o.total_amount));
-        }
-      });
+        ordersInRange.forEach(o => {
+          const orderHour = format(new Date(o.order_date), 'HH:mm');
+          // Round to nearest hour
+          const hourKey = orderHour.substring(0, 2) + ':00';
+          if (hourlyRevenueMap.has(hourKey)) {
+            hourlyRevenueMap.set(hourKey, hourlyRevenueMap.get(hourKey)! + Number(o.total_amount));
+          }
+        });
 
-      const dailyRevenue = Array.from(dailyRevenueMap.entries())
-        .map(([date, amount]) => ({ date, amount }))
-        .sort((a, b) => a.date.localeCompare(b.date));
+        dailyRevenue = Array.from(hourlyRevenueMap.entries())
+          .map(([date, amount]) => ({ date, amount }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+      } else {
+        // Daily view for multiple days
+        const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
+        const dailyRevenueMap = new Map<string, number>();
+        days.forEach(day => {
+          dailyRevenueMap.set(format(day, 'yyyy-MM-dd'), 0);
+        });
+
+        ordersInRange.forEach(o => {
+          const date = format(new Date(o.order_date), 'yyyy-MM-dd');
+          if (dailyRevenueMap.has(date)) {
+            dailyRevenueMap.set(date, dailyRevenueMap.get(date)! + Number(o.total_amount));
+          }
+        });
+
+        dailyRevenue = Array.from(dailyRevenueMap.entries())
+          .map(([date, amount]) => ({ date, amount }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+      }
 
       // Comparison data if comparison range is provided
       let comparisonDailyRevenue: { date: string; amount: number }[] | undefined;

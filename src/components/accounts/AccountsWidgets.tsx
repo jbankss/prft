@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, TrendingUp, TrendingDown, Package, Calendar } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -100,9 +100,9 @@ export function AccountsWidgets() {
   const widgets = [
     {
       title: 'Realized P&L',
-      value: `$${metrics.realizedPL.toLocaleString()}`,
+      value: '$0.00',
       icon: TrendingUp,
-      trend: 'Paid invoices',
+      trend: 'Starting fresh',
       color: 'text-green-500',
     },
     {
@@ -118,13 +118,6 @@ export function AccountsWidgets() {
       icon: DollarSign,
       trend: 'Vendors',
       color: 'text-blue-500',
-    },
-    {
-      title: 'Inventory Value',
-      value: `$${metrics.totalInventoryValue.toLocaleString()}`,
-      icon: Package,
-      trend: 'Est. value',
-      color: 'text-purple-500',
     },
     {
       title: 'Avg. Order Cycle',

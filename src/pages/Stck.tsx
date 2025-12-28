@@ -87,7 +87,6 @@ export default function Stck() {
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [factVisible, setFactVisible] = useState(true);
   const [greetingData, setGreetingData] = useState(() => getTimeGreeting(new Date().getHours()));
-  const [imageLoaded, setImageLoaded] = useState(false);
 
   // Get user's first name
   const firstName = useMemo(() => {
@@ -99,15 +98,6 @@ export default function Stck() {
     }
     return '';
   }, [user]);
-
-  // Preload current image
-  useEffect(() => {
-    if (currentImage?.url) {
-      const img = new Image();
-      img.onload = () => setImageLoaded(true);
-      img.src = currentImage.url;
-    }
-  }, [currentImage?.url]);
 
   // Update time every second
   useEffect(() => {
@@ -178,10 +168,7 @@ export default function Stck() {
       {/* Background image layer - current */}
       {currentImage && (
         <div
-          className={cn(
-            "absolute inset-0 bg-cover bg-center transition-opacity duration-[2000ms]",
-            imageLoaded ? "opacity-100" : "opacity-0"
-          )}
+          className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${currentImage.url})` }}
         />
       )}
@@ -197,8 +184,8 @@ export default function Stck() {
         />
       )}
 
-      {/* Fallback gradient (shows while images load) */}
-      {!imageLoaded && (
+      {/* Fallback gradient (shows only when no images at all) */}
+      {!currentImage && (
         <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary to-muted animate-gradient" />
       )}
       

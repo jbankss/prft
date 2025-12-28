@@ -47,23 +47,45 @@ function getTimePeriodName(hour: number): string {
 }
 
 export function useUnsplashBackground(): UseUnsplashBackgroundReturn {
-  const [images, setImages] = useState<UnsplashImage[]>([]);
+  const [images, setImages] = useState<UnsplashImage[]>(() => {
+    // Immediately load from cache on mount
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        const cacheData: CachedData = JSON.parse(cached);
+        return cacheData.images;
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    // Not loading if we have cached images
+    const cached = localStorage.getItem(CACHE_KEY);
+    return !cached;
+  });
   const [error, setError] = useState<string | null>(null);
   const preloadedImages = useRef<Set<string>>(new Set());
   const cycleIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Preload an image
-  const preloadImage = useCallback((url: string) => {
-    if (preloadedImages.current.has(url)) return;
+  // Preload an image and return a promise
+  const preloadImage = useCallback((url: string): Promise<void> => {
+    if (preloadedImages.current.has(url)) {
+      return Promise.resolve();
+    }
     
-    const img = new Image();
-    img.src = url;
-    img.onload = () => {
-      preloadedImages.current.add(url);
-    };
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        preloadedImages.current.add(url);
+        resolve();
+      };
+      img.onerror = () => resolve(); // Don't block on errors
+      img.src = url;
+    });
   }, []);
 
   // Fetch images from edge function
@@ -120,20 +142,31 @@ export function useUnsplashBackground(): UseUnsplashBackgroundReturn {
           setImages(cacheData.images);
           setIsLoading(false);
           
-          // Preload first few images
-          cacheData.images.slice(0, 3).forEach(img => preloadImage(img.url));
+          // Preload first image immediately, others in background
+          if (cacheData.images.length > 0) {
+            await preloadImage(cacheData.images[0].url);
+            cacheData.images.slice(1, 3).forEach(img => preloadImage(img.url));
+          }
           return;
         }
       }
 
-      // Fetch fresh images
-      setIsLoading(true);
+      // If we already have images from initial state, don't show loading
+      // Just fetch in background
+      const hasInitialImages = images.length > 0;
+      if (!hasInitialImages) {
+        setIsLoading(true);
+      }
+      
       const freshImages = await fetchImages(hour);
       setImages(freshImages);
       setError(null);
       
-      // Preload first few images
-      freshImages.slice(0, 3).forEach(img => preloadImage(img.url));
+      // Preload first image, then others
+      if (freshImages.length > 0) {
+        await preloadImage(freshImages[0].url);
+        freshImages.slice(1, 3).forEach(img => preloadImage(img.url));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load backgrounds');
       
@@ -147,7 +180,7 @@ export function useUnsplashBackground(): UseUnsplashBackgroundReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [fetchImages, preloadImage]);
+  }, [fetchImages, preloadImage, images.length]);
 
   // Initial load
   useEffect(() => {
