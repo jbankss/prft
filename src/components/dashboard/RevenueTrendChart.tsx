@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card';
 import { ResponsiveContainer, XAxis, YAxis, Tooltip, Area, AreaChart } from 'recharts';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 interface RevenueTrendChartProps {
   data: { date: string; amount: number }[];
@@ -9,16 +9,30 @@ interface RevenueTrendChartProps {
 }
 
 export function RevenueTrendChart({ data, comparisonData, title }: RevenueTrendChartProps) {
+  // Detect if data is hourly (date string contains time like "HH:mm") or daily
+  const isHourlyData = data.length > 0 && data[0].date.includes(':');
+  
   // Merge primary and comparison data for dual display
-  const chartData = data.map((d, index) => ({
-    date: format(new Date(d.date), 'MMM dd'),
-    fullDate: d.date,
-    amount: d.amount,
-    comparisonAmount: comparisonData?.[index]?.amount,
-    comparisonDate: comparisonData?.[index]?.date 
-      ? format(new Date(comparisonData[index].date), 'MMM dd') 
-      : undefined,
-  }));
+  const chartData = data.map((d, index) => {
+    let formattedDate: string;
+    if (isHourlyData) {
+      // Already formatted as HH:mm
+      formattedDate = d.date;
+    } else {
+      // Parse as date and format
+      formattedDate = format(parseISO(d.date), 'MMM dd');
+    }
+    
+    return {
+      date: formattedDate,
+      fullDate: d.date,
+      amount: d.amount,
+      comparisonAmount: comparisonData?.[index]?.amount,
+      comparisonDate: comparisonData?.[index]?.date 
+        ? (isHourlyData ? comparisonData[index].date : format(parseISO(comparisonData[index].date), 'MMM dd'))
+        : undefined,
+    };
+  });
 
   const hasComparison = comparisonData && comparisonData.length > 0;
 
@@ -106,6 +120,7 @@ export function RevenueTrendChart({ data, comparisonData, title }: RevenueTrendC
               stroke="hsl(var(--primary))"
               strokeWidth={3}
               fill="url(#revenueGradient)"
+              activeDot={{ r: 6, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
             />
           </AreaChart>
         </ResponsiveContainer>

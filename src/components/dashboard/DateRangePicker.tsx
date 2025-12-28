@@ -109,10 +109,10 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
             <ChevronDown className="w-4 h-4 ml-auto opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0 bg-background border shadow-lg" align="start">
           <div className="flex">
             {/* Presets */}
-            <div className="border-r p-2 space-y-1">
+            <div className="border-r p-2 space-y-1 bg-muted/50">
               {presets.map((preset) => (
                 <Button
                   key={preset.label}
@@ -164,7 +164,7 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                 <ChevronDown className="w-4 h-4 ml-auto opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-3" align="start">
+            <PopoverContent className="w-auto p-3 bg-background border shadow-lg" align="start">
               <CalendarComponent
                 mode="range"
                 selected={{ from: tempCompRange.from, to: tempCompRange.to }}
