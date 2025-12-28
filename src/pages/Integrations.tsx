@@ -11,6 +11,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { format } from 'date-fns';
 import { ShopifySetupWizard } from '@/components/integrations/ShopifySetupWizard';
 import { ConnectionStatus } from '@/components/integrations/ConnectionStatus';
+import { BrandBoomSetupWizard } from '@/components/integrations/BrandBoomSetupWizard';
+import { BrandBoomConnectionStatus } from '@/components/integrations/BrandBoomConnectionStatus';
 
 type WebhookLog = {
   id: string;
@@ -34,7 +36,10 @@ export default function Integrations() {
   const [shopDomain, setShopDomain] = useState<string | null>(null);
   const [lastSuccessfulWebhook, setLastSuccessfulWebhook] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
-
+  
+  // BrandBoom state
+  const [isBrandBoomConfigured, setIsBrandBoomConfigured] = useState(false);
+  const [showBrandBoomWizard, setShowBrandBoomWizard] = useState(false);
   useEffect(() => {
     if (!currentBrand) return;
 
@@ -57,23 +62,40 @@ export default function Integrations() {
         setLastSuccessfulWebhook(lastSuccess ? new Date(lastSuccess.created_at).toLocaleString() : null);
       }
 
-      // Fetch integration config
-      const { data: integration, error: integrationError } = await supabase
+      // Fetch Shopify integration config
+      const { data: shopifyIntegration } = await supabase
         .from('brand_integrations')
         .select('*')
         .eq('brand_id', currentBrand.id)
         .eq('integration_type', 'shopify')
         .maybeSingle();
 
-      if (!integrationError && integration) {
-        const fullyConfigured = integration.is_active && !!integration.webhook_secret && !!integration.api_access_token;
+      if (shopifyIntegration) {
+        const fullyConfigured = shopifyIntegration.is_active && !!shopifyIntegration.webhook_secret && !!shopifyIntegration.api_access_token;
         setIsConfigured(fullyConfigured);
-        setShopDomain(integration.shop_domain || null);
+        setShopDomain(shopifyIntegration.shop_domain || null);
         setShowWizard(!fullyConfigured);
       } else {
         setIsConfigured(false);
         setShopDomain(null);
         setShowWizard(true);
+      }
+
+      // Fetch BrandBoom integration config
+      const { data: brandBoomIntegration } = await supabase
+        .from('brand_integrations')
+        .select('*')
+        .eq('brand_id', currentBrand.id)
+        .eq('integration_type', 'brandboom')
+        .maybeSingle();
+
+      if (brandBoomIntegration) {
+        const fullyConfigured = brandBoomIntegration.is_active && !!brandBoomIntegration.api_access_token;
+        setIsBrandBoomConfigured(fullyConfigured);
+        setShowBrandBoomWizard(!fullyConfigured);
+      } else {
+        setIsBrandBoomConfigured(false);
+        setShowBrandBoomWizard(true);
       }
     };
 
@@ -108,6 +130,15 @@ export default function Integrations() {
 
   const handleReconfigure = () => {
     setShowWizard(true);
+  };
+
+  const handleBrandBoomSetupComplete = () => {
+    setIsBrandBoomConfigured(true);
+    setShowBrandBoomWizard(false);
+  };
+
+  const handleBrandBoomReconfigure = () => {
+    setShowBrandBoomWizard(true);
   };
 
   const getStatusIcon = (status: string) => {
@@ -164,12 +195,12 @@ export default function Integrations() {
             <Activity className="h-4 w-4 mr-2" />
             Activity Log
           </TabsTrigger>
+          <TabsTrigger value="brandboom">
+            <Package className="h-4 w-4 mr-2" />
+            BrandBoom
+          </TabsTrigger>
           <TabsTrigger value="square" disabled>
             <CreditCard className="h-4 w-4 mr-2" />
-            Square
-          </TabsTrigger>
-          <TabsTrigger value="brandboom" disabled>
-            <Package className="h-4 w-4 mr-2" />
             BrandBoom
           </TabsTrigger>
         </TabsList>
@@ -348,18 +379,33 @@ export default function Integrations() {
           </Card>
         </TabsContent>
 
-        {/* BrandBoom Tab (Coming Soon) */}
-        <TabsContent value="brandboom">
+        {/* BrandBoom Tab */}
+        <TabsContent value="brandboom" className="space-y-6">
+          {showBrandBoomWizard ? (
+            <BrandBoomSetupWizard 
+              brandId={currentBrand.id} 
+              onComplete={handleBrandBoomSetupComplete}
+            />
+          ) : (
+            <BrandBoomConnectionStatus
+              brandId={currentBrand.id}
+              onReconfigure={handleBrandBoomReconfigure}
+            />
+          )}
+        </TabsContent>
+
+        {/* Square Tab (Coming Soon) */}
+        <TabsContent value="square">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                BrandBoom Integration
+                <CreditCard className="h-5 w-5" />
+                Square Integration
               </CardTitle>
               <CardDescription>Coming soon</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">BrandBoom integration is coming soon. Check back later!</p>
+              <p className="text-muted-foreground">Square integration is coming soon. Check back later!</p>
             </CardContent>
           </Card>
         </TabsContent>

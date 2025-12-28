@@ -131,14 +131,14 @@ serve(async (req) => {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    // Check if we've already processed this order
-    const { data: existingInvoice } = await supabase
-      .from('invoices')
+    // Check if we've already processed this order in shopify_orders table
+    const { data: existingOrder } = await supabase
+      .from('shopify_orders')
       .select('id')
       .eq('shopify_order_id', order.id.toString())
       .maybeSingle();
 
-    if (existingInvoice) {
+    if (existingOrder) {
       console.log('Order already processed:', order.id);
       
       // Log duplicate order
@@ -160,8 +160,8 @@ serve(async (req) => {
       });
     }
 
-    // Process each line item
-    const invoicesToCreate = [];
+    // Process each line item - store in shopify_orders for sales tracking (NOT invoices)
+    const ordersToCreate = [];
     const accountsCreated = [];
     
     for (const item of order.line_items) {
@@ -208,36 +208,43 @@ serve(async (req) => {
       // Use pre_tax_price (final price after discounts) instead of retail price
       const amount = parseFloat(item.pre_tax_price || (item.price * item.quantity));
       
-      invoicesToCreate.push({
-        account_id: account.id,
-        invoice_number: `SHOP-${order.order_number}-${item.id}`,
-        amount: amount,
-        status: 'paid',
-        paid_date: new Date().toISOString().split('T')[0],
-        due_date: new Date().toISOString().split('T')[0],
+      // Store in shopify_orders table for sales tracking (NOT invoices)
+      ordersToCreate.push({
+        brand_id: brandId,
         shopify_order_id: order.id.toString(),
-        source: 'shopify',
-        notes: `Vendor: ${vendor}, Quantity: ${item.quantity}, Product: ${item.name}`,
+        order_number: order.order_number.toString(),
+        line_item_id: item.id.toString(),
+        order_date: order.created_at,
+        customer_name: order.customer?.first_name ? `${order.customer.first_name} ${order.customer.last_name || ''}`.trim() : null,
+        customer_email: order.customer?.email || null,
+        vendor: vendor,
+        product_name: item.name,
+        quantity: item.quantity,
+        unit_price: parseFloat(item.price),
+        total_amount: amount,
+        status: 'completed',
+        source: 'online',
+        raw_data: item
       });
 
-      console.log(`Processed vendor "${vendor}" for account "${account.account_name}"`);
+      console.log(`Processed vendor "${vendor}" - added to shopify_orders`);
     }
 
-    // Insert all invoices
-    if (invoicesToCreate.length > 0) {
+    // Insert all orders into shopify_orders table
+    if (ordersToCreate.length > 0) {
       const { error } = await supabase
-        .from('invoices')
-        .insert(invoicesToCreate);
+        .from('shopify_orders')
+        .insert(ordersToCreate);
 
       if (error) {
-        console.error('Error creating invoices:', error);
+        console.error('Error creating shopify orders:', error);
         return new Response(JSON.stringify({ error: error.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      console.log(`Created ${invoicesToCreate.length} invoices for order ${order.id}`);
+      console.log(`Created ${ordersToCreate.length} shopify_orders for order ${order.id}`);
     } else {
       console.log('No matching accounts found for any line items');
     }
@@ -249,16 +256,16 @@ serve(async (req) => {
       event_type: 'order_created',
       status: 'success',
       request_data: order,
-      response_summary: `Created ${invoicesToCreate.length} invoice(s) for ${accountsCreated.length > 0 ? accountsCreated.length + ' new account(s)' : 'existing accounts'}`,
+      response_summary: `Processed ${ordersToCreate.length} line item(s) for ${accountsCreated.length > 0 ? accountsCreated.length + ' new account(s)' : 'existing accounts'}`,
       shopify_order_id: order.id.toString(),
-      invoices_created: invoicesToCreate.length,
+      invoices_created: 0, // No longer creating invoices from Shopify
       accounts_created: accountsCreated.length
     });
 
     return new Response(
       JSON.stringify({ 
         message: 'Order processed successfully',
-        invoices_created: invoicesToCreate.length,
+        orders_created: ordersToCreate.length,
         accounts_created: accountsCreated.length,
         new_accounts: accountsCreated
       }),

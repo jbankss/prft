@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, TrendingUp, Package, Calendar } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Package, Calendar } from 'lucide-react';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 export function AccountsWidgets() {
   const { currentBrand } = useBrandContext();
   const [metrics, setMetrics] = useState({
-    totalPL: 0,
+    realizedPL: 0,
+    pendingLoss: 0,
     totalAccounts: 0,
     totalInventoryValue: 0,
     avgDaysBetweenOrders: 0,
@@ -24,20 +25,37 @@ export function AccountsWidgets() {
 
       if (!accounts) return;
 
-      // Calculate real P&L from actual data
-      // P&L = Revenue - Expenses
-      // Expenses = manual_balance (amount owed) + unpaid invoices
-      let totalPL = 0;
+      // CORRECT P&L Calculation:
+      // Realized P&L = Sum of paid amounts from invoices (money actually received/paid)
+      // Pending Loss = Sum of unpaid amounts (at risk)
+      let realizedPL = 0;
+      let pendingLoss = 0;
+
       accounts.forEach((account) => {
-        const amountOwed = Number(account.manual_balance || 0);
+        const invoices = account.invoices || [];
         
-        // Sum unpaid invoices as expenses
-        const unpaidInvoices = (account.invoices || [])
-          .filter((inv: any) => inv.status !== 'paid')
-          .reduce((sum: number, inv: any) => sum + Number(inv.amount), 0);
-        
-        // Both count against P&L
-        totalPL -= (amountOwed + unpaidInvoices);
+        invoices.forEach((inv: any) => {
+          const amount = Number(inv.amount) || 0;
+          const paidAmount = Number(inv.paid_amount) || 0;
+          
+          if (inv.status === 'paid') {
+            // Fully paid - count the full amount as realized
+            realizedPL += amount;
+          } else if (inv.status === 'partial') {
+            // Partial payment - split between realized and pending
+            realizedPL += paidAmount;
+            pendingLoss += (amount - paidAmount);
+          } else {
+            // Pending/unpaid - all goes to pending loss
+            pendingLoss += amount;
+          }
+        });
+
+        // Also add manual balance to pending if owed
+        const manualBalance = Number(account.manual_balance) || 0;
+        if (manualBalance > 0) {
+          pendingLoss += manualBalance;
+        }
       });
 
       // Calculate inventory value from account balances
@@ -56,7 +74,8 @@ export function AccountsWidgets() {
       }
 
       setMetrics({
-        totalPL,
+        realizedPL,
+        pendingLoss,
         totalAccounts: accounts.length,
         totalInventoryValue,
         avgDaysBetweenOrders: avgDays,
@@ -80,16 +99,23 @@ export function AccountsWidgets() {
 
   const widgets = [
     {
-      title: 'Total P&L',
-      value: `${metrics.totalPL >= 0 ? '+' : '-'}$${Math.abs(metrics.totalPL).toLocaleString()}`,
-      icon: DollarSign,
-      trend: metrics.totalPL >= 0 ? 'Profit' : 'Expenses',
-      color: metrics.totalPL >= 0 ? 'text-green-500' : 'text-red-500',
+      title: 'Realized P&L',
+      value: `$${metrics.realizedPL.toLocaleString()}`,
+      icon: TrendingUp,
+      trend: 'Paid invoices',
+      color: 'text-green-500',
+    },
+    {
+      title: 'Pending Loss',
+      value: `-$${metrics.pendingLoss.toLocaleString()}`,
+      icon: TrendingDown,
+      trend: 'Unpaid amounts',
+      color: metrics.pendingLoss > 0 ? 'text-red-500' : 'text-muted-foreground',
     },
     {
       title: 'Active Accounts',
       value: metrics.totalAccounts.toString(),
-      icon: TrendingUp,
+      icon: DollarSign,
       trend: 'Vendors',
       color: 'text-blue-500',
     },

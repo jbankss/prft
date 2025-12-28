@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Building2, MoreHorizontal, Pencil, Trash2, ExternalLink } from 'lucide-react';
+import { Building2, MoreHorizontal, Pencil, Trash2, ExternalLink, ShoppingBag, Package, User } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
@@ -24,6 +24,41 @@ interface Account {
   charges?: any[];
   invoices?: any[];
 }
+
+// Helper to determine account source from notes
+const getAccountSource = (notes?: string): 'shopify' | 'brandboom' | 'manual' => {
+  if (!notes) return 'manual';
+  const lowerNotes = notes.toLowerCase();
+  if (lowerNotes.includes('shopify')) return 'shopify';
+  if (lowerNotes.includes('brandboom')) return 'brandboom';
+  return 'manual';
+};
+
+const SourceBadge = ({ source }: { source: 'shopify' | 'brandboom' | 'manual' }) => {
+  switch (source) {
+    case 'shopify':
+      return (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-green-500/10 text-green-600 border-green-500/20">
+          <ShoppingBag className="h-3 w-3 mr-1" />
+          Shopify
+        </Badge>
+      );
+    case 'brandboom':
+      return (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-500/10 text-purple-600 border-purple-500/20">
+          <Package className="h-3 w-3 mr-1" />
+          BrandBoom
+        </Badge>
+      );
+    default:
+      return (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground">
+          <User className="h-3 w-3 mr-1" />
+          Manual
+        </Badge>
+      );
+  }
+};
 
 export function AccountsList({
   accounts,
@@ -109,13 +144,14 @@ export function AccountsList({
                       <h3 className="font-medium text-sm sm:text-base truncate group-hover:text-primary transition-colors">
                         {account.account_name}
                       </h3>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge 
                           variant={account.status === 'active' ? 'default' : 'secondary'} 
                           className="text-[10px] px-1.5 py-0"
                         >
                           {account.status}
                         </Badge>
+                        <SourceBadge source={getAccountSource(account.notes)} />
                         {invoiceCount > 0 && (
                           <span className="text-xs text-muted-foreground">
                             {invoiceCount} unpaid

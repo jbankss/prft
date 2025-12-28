@@ -1112,7 +1112,9 @@ export type Database = {
           id: string
           invoice_number: string
           notes: string | null
+          paid_amount: number | null
           paid_date: string | null
+          pdf_url: string | null
           shopify_order_id: string | null
           source: string | null
           status: string
@@ -1127,7 +1129,9 @@ export type Database = {
           id?: string
           invoice_number: string
           notes?: string | null
+          paid_amount?: number | null
           paid_date?: string | null
+          pdf_url?: string | null
           shopify_order_id?: string | null
           source?: string | null
           status?: string
@@ -1142,7 +1146,9 @@ export type Database = {
           id?: string
           invoice_number?: string
           notes?: string | null
+          paid_amount?: number | null
           paid_date?: string | null
+          pdf_url?: string | null
           shopify_order_id?: string | null
           source?: string | null
           status?: string
