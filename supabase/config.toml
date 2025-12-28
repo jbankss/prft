@@ -32,3 +32,6 @@ verify_jwt = true
 
 [functions.brandboom-sync]
 verify_jwt = true
+
+[functions.get-unsplash-backgrounds]
+verify_jwt = false

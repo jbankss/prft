@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Sun, Moon, Package, X, Sunrise, Sunset, Coffee, Star } from 'lucide-react';
+import { Sun, Moon, Package, X, Sunrise, Sunset, Coffee, Star, Camera } from 'lucide-react';
 import { useStckMetrics } from '@/hooks/useStckMetrics';
 import { useAuth } from '@/hooks/useAuth';
 import { useBrandContext } from '@/hooks/useBrandContext';
+import { useUnsplashBackground } from '@/hooks/useUnsplashBackground';
 import { cn } from '@/lib/utils';
 
 const TIME_GREETINGS = {
@@ -65,6 +66,7 @@ export default function Stck() {
   const { user } = useAuth();
   const { currentBrand } = useBrandContext();
   const { funFacts, newOrder, recentOrders } = useStckMetrics();
+  const { currentImage, nextImage, isTransitioning } = useUnsplashBackground();
   
   const [time, setTime] = useState(new Date());
   const [is24Hour, setIs24Hour] = useState(() => {
@@ -73,6 +75,7 @@ export default function Stck() {
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [factVisible, setFactVisible] = useState(true);
   const [greetingData, setGreetingData] = useState(() => getTimeGreeting(new Date().getHours()));
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // Get user's first name
   const firstName = useMemo(() => {
@@ -84,6 +87,15 @@ export default function Stck() {
     }
     return '';
   }, [user]);
+
+  // Preload current image
+  useEffect(() => {
+    if (currentImage?.url) {
+      const img = new Image();
+      img.onload = () => setImageLoaded(true);
+      img.src = currentImage.url;
+    }
+  }, [currentImage?.url]);
 
   // Update time every second
   useEffect(() => {
@@ -150,14 +162,40 @@ export default function Stck() {
   const currentFact = funFacts[currentFactIndex];
 
   return (
-    <div className="fixed inset-0 overflow-hidden select-none">
-      {/* Animated gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary to-muted animate-gradient" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-accent/10 via-transparent to-transparent" />
+    <div className="fixed inset-0 overflow-hidden select-none bg-black">
+      {/* Background image layer - current */}
+      {currentImage && (
+        <div
+          className={cn(
+            "absolute inset-0 bg-cover bg-center transition-opacity duration-[2000ms]",
+            imageLoaded ? "opacity-100" : "opacity-0"
+          )}
+          style={{ backgroundImage: `url(${currentImage.url})` }}
+        />
+      )}
+      
+      {/* Background image layer - next (for crossfade) */}
+      {nextImage && isTransitioning && (
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-0 animate-fade-in"
+          style={{ 
+            backgroundImage: `url(${nextImage.url})`,
+            animationDuration: '2s',
+          }}
+        />
+      )}
+
+      {/* Fallback gradient (shows while images load) */}
+      {!imageLoaded && (
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary to-muted animate-gradient" />
+      )}
+      
+      {/* Dark gradient overlay for text contrast */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/30" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
       
       {/* Subtle noise texture overlay */}
-      <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
+      <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\'/%3E%3C/svg%3E")' }} />
 
       {/* Content container */}
       <div className="relative z-10 h-full flex flex-col">
@@ -170,10 +208,10 @@ export default function Stck() {
               <img 
                 src={currentBrand.logo_url} 
                 alt={currentBrand.name} 
-                className="h-10 w-auto object-contain opacity-80"
+                className="h-10 w-auto object-contain opacity-90 drop-shadow-lg"
               />
             ) : currentBrand?.name ? (
-              <div className="flex items-center gap-2 text-foreground/60">
+              <div className="flex items-center gap-2 text-white/70">
                 <Star className="h-5 w-5" />
                 <span className="text-sm font-medium tracking-wide">{currentBrand.name}</span>
               </div>
@@ -183,7 +221,7 @@ export default function Stck() {
           {/* Exit button */}
           <button
             onClick={handleExit}
-            className="p-3 rounded-full text-muted-foreground/60 hover:text-foreground hover:bg-foreground/5 transition-all duration-300"
+            className="p-3 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-all duration-300 backdrop-blur-sm"
           >
             <X className="h-5 w-5" />
           </button>
@@ -193,7 +231,7 @@ export default function Stck() {
         <div className="flex-1 flex flex-col items-center justify-center px-6 -mt-10">
           
           {/* Time-based greeting */}
-          <div className="flex items-center gap-3 mb-6 text-muted-foreground">
+          <div className="flex items-center gap-3 mb-6 text-white/70">
             {greetingData.icon}
             <span className="text-lg font-light tracking-wide">
               {greetingData.greeting}{firstName ? `, ${firstName}` : ''}
@@ -202,28 +240,28 @@ export default function Stck() {
 
           {/* Date */}
           <div className="mb-4">
-            <span className="text-sm font-medium tracking-widest uppercase text-muted-foreground/60">
+            <span className="text-sm font-medium tracking-widest uppercase text-white/50">
               {format(time, 'EEEE, MMMM d, yyyy')}
             </span>
           </div>
 
           {/* Giant clock */}
           <div className="flex items-baseline font-bold tracking-tighter mb-8">
-            <span className="text-[16rem] lg:text-[20rem] leading-none text-foreground tabular-nums drop-shadow-sm">
+            <span className="text-[16rem] lg:text-[20rem] leading-none text-white tabular-nums drop-shadow-2xl">
               {formatHour(hours)}
             </span>
-            <span className="text-[12rem] lg:text-[16rem] leading-none text-foreground/30 mx-2 animate-pulse">
+            <span className="text-[12rem] lg:text-[16rem] leading-none text-white/40 mx-2 animate-pulse">
               :
             </span>
-            <span className="text-[16rem] lg:text-[20rem] leading-none text-foreground tabular-nums drop-shadow-sm">
+            <span className="text-[16rem] lg:text-[20rem] leading-none text-white tabular-nums drop-shadow-2xl">
               {minutes.toString().padStart(2, '0')}
             </span>
             <div className="flex flex-col ml-6 gap-1">
-              <span className="text-[3rem] lg:text-[4rem] leading-none text-muted-foreground/40 tabular-nums font-medium">
+              <span className="text-[3rem] lg:text-[4rem] leading-none text-white/50 tabular-nums font-medium">
                 {seconds.toString().padStart(2, '0')}
               </span>
               {!is24Hour && (
-                <span className="text-lg font-medium text-muted-foreground/40 tracking-wider">
+                <span className="text-lg font-medium text-white/40 tracking-wider">
                   {amPm}
                 </span>
               )}
@@ -231,14 +269,14 @@ export default function Stck() {
           </div>
 
           {/* 12h/24h toggle */}
-          <div className="flex items-center gap-1 bg-foreground/5 rounded-full p-1 backdrop-blur-sm">
+          <div className="flex items-center gap-1 bg-white/10 rounded-full p-1 backdrop-blur-md">
             <button
               onClick={() => setIs24Hour(false)}
               className={cn(
                 'px-4 py-2 text-xs font-medium rounded-full transition-all duration-300',
                 !is24Hour 
-                  ? 'bg-foreground text-background shadow-lg' 
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-white text-black shadow-lg' 
+                  : 'text-white/60 hover:text-white'
               )}
             >
               12h
@@ -248,8 +286,8 @@ export default function Stck() {
               className={cn(
                 'px-4 py-2 text-xs font-medium rounded-full transition-all duration-300',
                 is24Hour 
-                  ? 'bg-foreground text-background shadow-lg' 
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-white text-black shadow-lg' 
+                  : 'text-white/60 hover:text-white'
               )}
             >
               24h
@@ -264,47 +302,74 @@ export default function Stck() {
           <div className="flex justify-center mb-8">
             <div
               className={cn(
-                'flex items-center gap-4 px-8 py-4 bg-foreground/5 backdrop-blur-sm rounded-2xl border border-foreground/5 transition-all duration-500',
+                'flex items-center gap-4 px-8 py-4 bg-black/30 backdrop-blur-md rounded-2xl border border-white/10 transition-all duration-500',
                 factVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
               )}
             >
               <span className="text-2xl">{currentFact?.emoji}</span>
-              <span className="text-sm font-medium text-foreground/70">
+              <span className="text-sm font-medium text-white/80">
                 {currentFact?.text}
               </span>
             </div>
           </div>
 
-          {/* Bottom row - Recent orders and new order notification */}
+          {/* Bottom row - Attribution, Recent orders and new order notification */}
           <div className="flex items-end justify-between">
             
-            {/* Recent orders (left) */}
-            <div className="flex flex-col gap-2 opacity-50 hover:opacity-80 transition-opacity duration-300">
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-1">Recent Orders</span>
+            {/* Photo attribution (left) - Unsplash requirement */}
+            {currentImage && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-black/40 backdrop-blur-sm rounded-lg">
+                <Camera className="h-3 w-3 text-white/50" />
+                <span className="text-white/50 text-xs">Photo by</span>
+                <a 
+                  href={currentImage.photographerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/80 text-xs font-medium hover:text-white hover:underline transition-colors"
+                >
+                  {currentImage.photographer}
+                </a>
+                <span className="text-white/30">on</span>
+                <a 
+                  href={currentImage.unsplashUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/80 text-xs font-medium hover:text-white hover:underline transition-colors"
+                >
+                  Unsplash
+                </a>
+              </div>
+            )}
+            
+            {/* Recent orders (center) */}
+            <div className="flex flex-col gap-2 opacity-50 hover:opacity-80 transition-opacity duration-300 mx-auto">
+              <span className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Recent Orders</span>
               {recentOrders.slice(0, 3).map((order) => (
-                <div key={order.id} className="text-xs text-muted-foreground flex items-center gap-2">
+                <div key={order.id} className="text-xs text-white/70 flex items-center gap-2">
                   <span className="font-medium">#{order.order_number}</span>
-                  <span className="text-muted-foreground/40">•</span>
+                  <span className="text-white/30">•</span>
                   <span>${order.total_amount?.toFixed(0)}</span>
                 </div>
               ))}
             </div>
 
             {/* New order notification (right) */}
-            {newOrder && (
+            {newOrder ? (
               <div className="animate-in slide-in-from-right-5 duration-500">
-                <div className="flex items-center gap-4 px-5 py-4 bg-primary text-primary-foreground rounded-2xl shadow-xl">
-                  <div className="p-2 bg-primary-foreground/20 rounded-xl">
+                <div className="flex items-center gap-4 px-5 py-4 bg-white text-black rounded-2xl shadow-xl">
+                  <div className="p-2 bg-black/10 rounded-xl">
                     <Package className="h-5 w-5" />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-semibold">New Order</span>
-                    <span className="text-xs opacity-80">
+                    <span className="text-xs opacity-70">
                       #{newOrder.order_number} • ${newOrder.total_amount?.toFixed(2)}
                     </span>
                   </div>
                 </div>
               </div>
+            ) : (
+              <div className="w-[200px]" /> // Spacer to balance layout
             )}
           </div>
         </div>
