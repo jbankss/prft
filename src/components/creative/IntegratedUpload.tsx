@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBrandContext } from '@/hooks/useBrandContext';
+import { useCreativePermissions } from '@/hooks/useCreativePermissions';
 import { supabase } from '@/integrations/supabase/client';
 import { logCreativeActivity } from '@/lib/creativeActivityLogger';
 import { Card } from '@/components/ui/card';
@@ -11,15 +12,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, X, FileImage, Sparkles } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Upload, X, FileImage, Sparkles, FolderOpen, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface FileWithPath extends File {
+  relativePath?: string;
+}
 
 export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
   const { user } = useAuth();
   const { currentBrand } = useBrandContext();
-  const [files, setFiles] = useState<File[]>([]);
+  const { canUploadDirect, roleLevel } = useCreativePermissions();
+  const [files, setFiles] = useState<FileWithPath[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [folderName, setFolderName] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     category: 'photography',
     status: 'pending',
@@ -31,19 +39,101 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
 
   const handleFileDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    setFiles(prev => [...prev, ...droppedFiles]);
+    const items = e.dataTransfer.items;
+    const fileList: FileWithPath[] = [];
+    let detectedFolderName: string | null = null;
+
+    // Check for folder drops
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i].webkitGetAsEntry?.();
+        if (item?.isDirectory) {
+          detectedFolderName = item.name;
+        }
+      }
+    }
+
+    const droppedFiles = Array.from(e.dataTransfer.files) as FileWithPath[];
+    droppedFiles.forEach(file => {
+      // Try to extract relative path from webkit
+      const relativePath = (file as any).webkitRelativePath || file.name;
+      file.relativePath = relativePath;
+      
+      // Try to detect folder name from path
+      if (relativePath.includes('/')) {
+        const parts = relativePath.split('/');
+        if (!detectedFolderName && parts.length > 1) {
+          detectedFolderName = parts[0];
+        }
+      }
+      fileList.push(file);
+    });
+
+    if (detectedFolderName) {
+      setFolderName(detectedFolderName);
+      setFormData(prev => ({ ...prev, title: detectedFolderName || '' }));
+    }
+    
+    setFiles(prev => [...prev, ...fileList]);
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
+      const selectedFiles = Array.from(e.target.files) as FileWithPath[];
+      let detectedFolderName: string | null = null;
+      
+      selectedFiles.forEach(file => {
+        const relativePath = (file as any).webkitRelativePath || file.name;
+        file.relativePath = relativePath;
+        
+        if (relativePath.includes('/')) {
+          const parts = relativePath.split('/');
+          if (!detectedFolderName && parts.length > 1) {
+            detectedFolderName = parts[0];
+          }
+        }
+      });
+
+      if (detectedFolderName) {
+        setFolderName(detectedFolderName);
+        setFormData(prev => ({ ...prev, title: detectedFolderName || '' }));
+      }
+      
+      setFiles(prev => [...prev, ...selectedFiles]);
+    }
+  };
+
+  const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files) as FileWithPath[];
+      let detectedFolderName: string | null = null;
+      
+      selectedFiles.forEach(file => {
+        const relativePath = (file as any).webkitRelativePath || file.name;
+        file.relativePath = relativePath;
+        
+        if (relativePath.includes('/')) {
+          const parts = relativePath.split('/');
+          if (!detectedFolderName && parts.length > 1) {
+            detectedFolderName = parts[0];
+          }
+        }
+      });
+
+      if (detectedFolderName) {
+        setFolderName(detectedFolderName);
+        setFormData(prev => ({ ...prev, title: detectedFolderName || '' }));
+      }
+      
       setFiles(prev => [...prev, ...selectedFiles]);
     }
   };
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+    if (files.length <= 1) {
+      setFolderName(null);
+    }
   };
 
   const handleUpload = async () => {
@@ -57,13 +147,41 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
         ? 'design-assets' 
         : 'creative-assets';
 
+      // Determine initial status based on permissions
+      const initialStatus = canUploadDirect ? 'approved' : 'pending';
+      
+      // Create upload session for batch tracking
+      let sessionId: string | null = null;
+      const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+      
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('upload_sessions')
+        .insert({
+          brand_id: currentBrand.id,
+          uploaded_by: user.id,
+          title: formData.title || folderName || `Upload ${new Date().toLocaleDateString()}`,
+          status: canUploadDirect ? 'approved' : 'pending_approval',
+          file_count: files.length,
+          total_size: totalSize,
+          source_folder_name: folderName,
+          metadata: {
+            category: formData.category,
+            description: formData.description,
+            tags: formData.tags
+          }
+        })
+        .select()
+        .single();
+
+      if (sessionError) throw sessionError;
+      sessionId = sessionData.id;
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
 
-        // Update progress: preparing
         setProgress(((i / files.length) * 100) + 5);
 
         const { error: uploadError } = await supabase.storage
@@ -75,7 +193,6 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
 
         if (uploadError) throw uploadError;
 
-        // Update progress: uploaded
         setProgress(((i / files.length) * 100) + 15);
 
         let width, height;
@@ -85,10 +202,8 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
           height = img.height;
         }
 
-        // Update progress: processing
         setProgress(((i / files.length) * 100) + 20);
 
-        // Get initial tags
         let initialTags = formData.tags ? formData.tags.split(',').map(t => t.trim()) : [];
 
         const { data: assetData, error: dbError } = await supabase.from('creative_assets').insert({
@@ -103,34 +218,40 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
           title: formData.title || file.name,
           description: formData.description,
           tags: initialTags,
-          status: formData.status,
+          status: initialStatus,
           category: formData.category,
           uploaded_by: user.id,
           brand_id: currentBrand.id,
+          upload_session_id: sessionId,
+          metadata: {
+            relative_path: file.relativePath,
+            source_folder: folderName
+          }
         }).select().single();
 
         if (dbError) throw dbError;
 
-        // Log activity
         await logCreativeActivity({
           action: 'uploaded_asset',
           entityType: 'asset',
           entityId: assetData.id,
           brandId: currentBrand.id,
-          metadata: { file_name: file.name, file_size: file.size }
+          metadata: { 
+            file_name: file.name, 
+            file_size: file.size,
+            session_id: sessionId,
+            requires_approval: !canUploadDirect
+          }
         });
 
-        // Update progress: saved
         setProgress(((i / files.length) * 100) + 25);
 
-        // If AI tagging is enabled and it's an image, analyze it
         if (formData.aiTagging && file.type.startsWith('image/') && assetData) {
           try {
             const { data: { publicUrl } } = supabase.storage
               .from(bucket)
               .getPublicUrl(filePath);
 
-            // Update progress: AI analyzing
             setProgress(((i / files.length) * 100) + 30);
 
             const { data: aiResult } = await supabase.functions.invoke('analyze-image', {
@@ -147,16 +268,20 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
             }
           } catch (aiError) {
             console.error('AI tagging error:', aiError);
-            // Don't fail the upload if AI tagging fails
           }
         }
 
-        // Update progress: complete for this file
         setProgress(((i + 1) / files.length) * 100);
       }
 
-      toast.success(`Successfully uploaded ${files.length} file${files.length > 1 ? 's' : ''}`);
+      if (canUploadDirect) {
+        toast.success(`Successfully uploaded ${files.length} file${files.length > 1 ? 's' : ''}`);
+      } else {
+        toast.success(`Submitted ${files.length} file${files.length > 1 ? 's' : ''} for approval`);
+      }
+      
       setFiles([]);
+      setFolderName(null);
       setFormData({
         category: 'photography',
         status: 'pending',
@@ -181,6 +306,21 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
         <p className="text-muted-foreground text-lg">Upload your creative files with full quality storage</p>
       </div>
 
+      {/* Permission indicator */}
+      <div className="flex items-center gap-2">
+        {canUploadDirect ? (
+          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Direct upload enabled
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+            <Clock className="h-3 w-3 mr-1" />
+            Uploads require approval
+          </Badge>
+        )}
+      </div>
+
       <Card className="p-10 space-y-8">
         <div
           onDrop={handleFileDrop}
@@ -194,11 +334,33 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
             </div>
             <div>
               <p className="text-xl font-semibold mb-2">
-                Drop files here or click to browse
+                Drop files or folders here, or click to browse
               </p>
               <p className="text-muted-foreground">
                 Max 500MB per file. Supports images, videos, and design files.
               </p>
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  document.getElementById('file-input-integrated')?.click();
+                }}
+              >
+                <FileImage className="h-4 w-4 mr-2" />
+                Select Files
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  document.getElementById('folder-input-integrated')?.click();
+                }}
+              >
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Select Folder
+              </Button>
             </div>
           </div>
           <input
@@ -209,7 +371,24 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
             className="hidden"
             accept="image/*,video/*,.psd,.ai,.pdf"
           />
+          <input
+            id="folder-input-integrated"
+            type="file"
+            multiple
+            onChange={handleFolderSelect}
+            className="hidden"
+            accept="image/*,video/*,.psd,.ai,.pdf"
+            {...{ webkitdirectory: '', directory: '' } as any}
+          />
         </div>
+
+        {folderName && (
+          <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+            <FolderOpen className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium">Folder detected: {folderName}</span>
+            <span className="text-sm text-muted-foreground">({files.length} files)</span>
+          </div>
+        )}
 
         {files.length > 0 && (
           <div className="space-y-3">
@@ -222,6 +401,11 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
                     <p className="text-sm font-medium truncate">{file.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {(file.size / (1024 * 1024)).toFixed(2)} MB
+                      {file.relativePath && file.relativePath !== file.name && (
+                        <span className="ml-2 text-muted-foreground/70">
+                          {file.relativePath}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <Button
@@ -259,32 +443,34 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value) => setFormData({ ...formData, status: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="deployed">Deployed</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {canUploadDirect && (
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData({ ...formData, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="deployed">Deployed</SelectItem>
+                  <SelectItem value="submitted">Submitted</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label>Title (optional)</Label>
+          <Label>Title {folderName && '(auto-detected from folder)'}</Label>
           <Input
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            placeholder="Asset title"
+            placeholder="Asset title or batch name"
           />
         </div>
 
@@ -339,13 +525,24 @@ export function IntegratedUpload({ onSuccess }: { onSuccess: () => void }) {
           </div>
         )}
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
+          {!canUploadDirect && files.length > 0 && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mr-auto">
+              <AlertCircle className="h-4 w-4" />
+              Files will be submitted for Director approval
+            </div>
+          )}
           <Button 
             onClick={handleUpload} 
             disabled={files.length === 0 || uploading}
             size="lg"
           >
-            {uploading ? 'Uploading...' : `Upload ${files.length} File${files.length !== 1 ? 's' : ''}`}
+            {uploading 
+              ? 'Uploading...' 
+              : canUploadDirect 
+                ? `Upload ${files.length} File${files.length !== 1 ? 's' : ''}`
+                : `Submit ${files.length} File${files.length !== 1 ? 's' : ''} for Approval`
+            }
           </Button>
         </div>
       </Card>

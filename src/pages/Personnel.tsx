@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, UserPlus, Mail, Phone, AlertTriangle, Activity, Shield, Clock } from 'lucide-react';
+import { Search, UserPlus, Mail, Phone, AlertTriangle, Activity, Shield, Clock, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { RolePermissionsMatrix } from '@/components/personnel/RolePermissionsMatrix';
+
 interface TeamMember {
   id: string;
   email: string;
@@ -21,6 +23,7 @@ interface TeamMember {
   avatar_url: string | null;
   status: string;
   role: string;
+  creative_role: string | null;
   phone_number: string | null;
   title: string | null;
   created_at: string;
@@ -58,6 +61,7 @@ export default function Personnel() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
   const [inviteRole, setInviteRole] = useState('user');
+  const [inviteCreativeRole, setInviteCreativeRole] = useState<string>('none');
   useEffect(() => {
     if (currentBrand) {
       fetchMembers();
@@ -69,7 +73,7 @@ export default function Personnel() {
       const {
         data: roles,
         error: rolesError
-      } = await supabase.from('user_roles').select('user_id, role, approved, brand_id').eq('brand_id', currentBrand.id).eq('approved', true);
+      } = await supabase.from('user_roles').select('user_id, role, creative_role, approved, brand_id').eq('brand_id', currentBrand.id).eq('approved', true);
       if (rolesError) throw rolesError;
       const userIds = roles?.map(r => r.user_id) || [];
 
@@ -93,6 +97,7 @@ export default function Personnel() {
           avatar_url: profile.avatar_url,
           status: profile.status || 'online',
           role: r.role,
+          creative_role: r.creative_role,
           phone_number: profile.phone_number,
           title: profile.title,
           created_at: profile.created_at
@@ -116,6 +121,7 @@ export default function Personnel() {
             avatar_url: currentUserProfile.avatar_url,
             status: currentUserProfile.status || 'online',
             role: 'admin',
+            creative_role: 'creative_director',
             phone_number: currentUserProfile.phone_number,
             title: currentUserProfile.title,
             created_at: currentUserProfile.created_at
@@ -173,8 +179,29 @@ export default function Personnel() {
       if (error) throw error;
       toast.success('Role updated successfully');
       fetchMembers();
+      if (selectedMember?.id === memberId) {
+        setSelectedMember({ ...selectedMember, role: newRole });
+      }
     } catch (error: any) {
       toast.error('Failed to update role');
+    }
+  };
+
+  const handleCreativeRoleChange = async (memberId: string, newCreativeRole: string) => {
+    try {
+      const {
+        error
+      } = await supabase.from('user_roles').update({
+        creative_role: newCreativeRole === 'none' ? null : newCreativeRole
+      }).eq('user_id', memberId).eq('brand_id', currentBrand.id);
+      if (error) throw error;
+      toast.success('Creative role updated successfully');
+      fetchMembers();
+      if (selectedMember?.id === memberId) {
+        setSelectedMember({ ...selectedMember, creative_role: newCreativeRole === 'none' ? null : newCreativeRole });
+      }
+    } catch (error: any) {
+      toast.error('Failed to update creative role');
     }
   };
   const handleRemoveMember = async (memberId: string) => {
@@ -294,6 +321,23 @@ export default function Personnel() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Creative Role</Label>
+                  <RolePermissionsMatrix />
+                </div>
+                <Select value={inviteCreativeRole} onValueChange={setInviteCreativeRole}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="creative">Creative</SelectItem>
+                    <SelectItem value="senior_creative">Senior Creative</SelectItem>
+                    <SelectItem value="creative_director">Creative Director</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button onClick={handleInvite} className="w-full" size="lg">
                 Send Invitation
               </Button>
@@ -323,9 +367,15 @@ export default function Personnel() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-lg truncate">{member.full_name || member.email}</p>
                     <Badge variant="outline" className="capitalize">{member.role}</Badge>
+                    {member.creative_role && (
+                      <Badge variant="secondary" className="capitalize text-xs">
+                        <Palette className="h-3 w-3 mr-1" />
+                        {member.creative_role.replace('_', ' ')}
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground truncate">{member.title || member.email}</p>
                 </div>
@@ -389,6 +439,23 @@ export default function Personnel() {
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Palette className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1">
+                      <Select value={selectedMember.creative_role || 'none'} onValueChange={value => handleCreativeRoleChange(selectedMember.id, value)}>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="No creative role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Creative Role</SelectItem>
+                          <SelectItem value="creative">Creative</SelectItem>
+                          <SelectItem value="senior_creative">Senior Creative</SelectItem>
+                          <SelectItem value="creative_director">Creative Director</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <RolePermissionsMatrix />
                   </div>
                 </div>
 
