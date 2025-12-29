@@ -102,36 +102,22 @@ export function FldrGreeting() {
   const currentFact = funFacts[currentFactIndex];
 
   return (
-    <div className="relative overflow-hidden rounded-3xl">
-      {/* Unsplash Background with Liquid Blob Effect */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Blob-shaped container */}
-        <div 
-          className={cn(
-            "absolute inset-0 fldr-blob-morph overflow-hidden",
-            isTransitioning && "opacity-0 transition-opacity duration-1000"
-          )}
-          style={{
-            clipPath: 'polygon(0% 0%, 100% 0%, 100% 85%, 80% 100%, 20% 95%, 0% 100%)'
-          }}
-        >
-          {currentImage && (
-            <img
-              src={currentImage.url}
-              alt="Background"
-              className={cn(
-                "absolute inset-0 w-full h-full object-cover transition-all duration-1000",
-                isTransitioning ? "scale-110 opacity-0" : "scale-100 opacity-100"
-              )}
-            />
-          )}
-          
-          {/* Dark overlay for text contrast */}
-          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background/90" />
-          
-          {/* Liquid edge effect */}
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
-        </div>
+    <div className="relative overflow-hidden rounded-2xl">
+      {/* Simple Rectangular Unsplash Banner */}
+      <div className="absolute inset-0">
+        {currentImage && (
+          <img
+            src={currentImage.url}
+            alt="Background"
+            className={cn(
+              "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000",
+              isTransitioning ? "opacity-0" : "opacity-100"
+            )}
+          />
+        )}
+        
+        {/* Dark overlay for text contrast */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/50 to-background/80" />
       </div>
 
       {/* Content */}
