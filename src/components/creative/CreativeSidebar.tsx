@@ -47,12 +47,11 @@ export function CreativeSidebar({ activeView, onViewChange, pendingApprovals = 0
               <Icon className="w-5 h-5" />
               <span className="text-[9px] font-medium">{item.label}</span>
               {item.badge && item.badge > 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
+                <span 
+                  className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-semibold bg-red-500 text-white rounded-full shadow-lg ring-2 ring-card"
                 >
-                  {item.badge > 9 ? '9+' : item.badge}
-                </Badge>
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
               )}
             </Button>
           );

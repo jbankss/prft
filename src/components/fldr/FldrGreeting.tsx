@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
-import { Sun, Moon, Sunrise, Sunset, Coffee } from 'lucide-react';
+import { Sun, Moon, Sunrise, Sunset, Coffee, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useStckMetrics } from '@/hooks/useStckMetrics';
 import { cn } from '@/lib/utils';
 
 const TIME_GREETINGS = {
@@ -59,9 +60,12 @@ function getTimeGreeting(hour: number): { greeting: string; icon: React.ReactNod
 
 export function FldrGreeting() {
   const { user } = useAuth();
+  const { funFacts } = useStckMetrics();
   const [time, setTime] = useState(new Date());
   const [greetingData, setGreetingData] = useState(() => getTimeGreeting(new Date().getHours()));
   const [hasEntered, setHasEntered] = useState(false);
+  const [currentFactIndex, setCurrentFactIndex] = useState(0);
+  const [factVisible, setFactVisible] = useState(true);
 
   const firstName = useMemo(() => {
     if (user?.user_metadata?.full_name) {
@@ -92,54 +96,103 @@ export function FldrGreeting() {
     return () => clearInterval(interval);
   }, []);
 
+  // Rotate fun facts
+  useEffect(() => {
+    if (funFacts.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setFactVisible(false);
+      setTimeout(() => {
+        setCurrentFactIndex(prev => (prev + 1) % funFacts.length);
+        setFactVisible(true);
+      }, 500);
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [funFacts.length]);
+
   const hours = time.getHours();
   const minutes = time.getMinutes();
+  const seconds = time.getSeconds();
   const amPm = hours >= 12 ? 'PM' : 'AM';
   const hour12 = hours % 12 || 12;
+
+  const currentFact = funFacts[currentFactIndex];
 
   return (
     <div 
       className={cn(
-        "flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-6 bg-card rounded-3xl border border-border transition-all duration-700",
+        "flex flex-col items-center gap-6 py-8 md:py-12 transition-all duration-700",
         hasEntered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
       )}
     >
-      {/* Greeting Section */}
-      <div className="flex items-center gap-4">
-        <div className="p-3 rounded-2xl bg-primary/10">
-          {greetingData.icon}
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm">
-            {greetingData.greeting}
-          </p>
-          <h2 className="text-2xl font-display font-semibold">
-            {firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
-          </h2>
+      {/* Greeting with icon - subtle */}
+      <div 
+        className={cn(
+          "flex items-center gap-2 text-muted-foreground transition-all duration-700 delay-100",
+          hasEntered ? "opacity-100" : "opacity-0"
+        )}
+      >
+        {greetingData.icon}
+        <span className="text-sm font-medium">
+          {greetingData.greeting}{firstName ? `, ${firstName}` : ''}
+        </span>
+      </div>
+
+      {/* Date - small */}
+      <p 
+        className={cn(
+          "text-xs text-muted-foreground/70 uppercase tracking-widest transition-all duration-700 delay-150",
+          hasEntered ? "opacity-100" : "opacity-0"
+        )}
+      >
+        {format(time, 'EEEE, MMMM d')}
+      </p>
+
+      {/* Giant centered clock with seconds */}
+      <div 
+        className={cn(
+          "flex items-baseline justify-center transition-all duration-700 delay-200",
+          hasEntered ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        )}
+      >
+        <span className="text-[6rem] md:text-[10rem] lg:text-[14rem] font-bold tabular-nums font-display leading-none tracking-tighter text-foreground">
+          {hour12}
+        </span>
+        <span className="text-[4rem] md:text-[7rem] lg:text-[10rem] font-bold text-muted-foreground/30 mx-1 animate-pulse leading-none">
+          :
+        </span>
+        <span className="text-[6rem] md:text-[10rem] lg:text-[14rem] font-bold tabular-nums font-display leading-none tracking-tighter text-foreground">
+          {minutes.toString().padStart(2, '0')}
+        </span>
+        <div className="flex flex-col ml-3 md:ml-4 gap-1">
+          <span className="text-2xl md:text-4xl lg:text-5xl font-bold tabular-nums text-muted-foreground/50 leading-none">
+            {seconds.toString().padStart(2, '0')}
+          </span>
+          <span className="text-xs md:text-sm font-medium text-muted-foreground/40 tracking-wider">
+            {amPm}
+          </span>
         </div>
       </div>
 
-      {/* Clock Section */}
-      <div 
-        className={cn(
-          "flex items-center gap-3 transition-all duration-700 delay-100",
-          hasEntered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-        )}
-      >
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">
-            {format(time, 'EEEE, MMMM d')}
-          </p>
-          <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-bold tabular-nums font-display">
-              {hour12}:{minutes.toString().padStart(2, '0')}
-            </span>
-            <span className="text-sm font-medium text-muted-foreground">
-              {amPm}
-            </span>
+      {/* AI Insights - fun fact popup */}
+      {currentFact && (
+        <div 
+          className={cn(
+            "flex items-center gap-3 px-5 py-3 bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-sm transition-all duration-500 max-w-md",
+            hasEntered ? "opacity-100 translate-y-0 delay-300" : "opacity-0 translate-y-4",
+            factVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+          )}
+        >
+          <div className="p-2 rounded-xl bg-primary/10">
+            <Sparkles className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{currentFact.emoji}</span>
+            <span className="text-sm text-muted-foreground">{currentFact.text}</span>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

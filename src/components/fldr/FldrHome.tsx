@@ -1,6 +1,5 @@
 import { FldrGreeting } from './FldrGreeting';
 import { FolderGrid } from './FolderGrid';
-import { AIInsightsCard } from './AIInsightsCard';
 import { ActivityFeedCard } from './ActivityFeedCard';
 import { QuickUploadCard } from './QuickUploadCard';
 
@@ -11,16 +10,17 @@ interface FldrHomeProps {
 
 export function FldrHome({ onNavigateToAssets, onNavigateToUpload }: FldrHomeProps) {
   return (
-    <div className="space-y-6 md:space-y-8 animate-fade-in">
-      {/* Greeting + Clock */}
+    <div className="animate-fade-in">
+      {/* Greeting + Clock + AI Insights */}
       <FldrGreeting />
 
       {/* Folder Grid */}
-      <FolderGrid onNavigateToAssets={onNavigateToAssets} />
+      <div className="mt-8">
+        <FolderGrid onNavigateToAssets={onNavigateToAssets} />
+      </div>
 
-      {/* Bottom Grid: AI Insights + Activity Feed + Quick Upload */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <AIInsightsCard />
+      {/* Bottom Grid: Activity Feed + Quick Upload */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <ActivityFeedCard />
         <QuickUploadCard onNavigateToUpload={onNavigateToUpload} />
       </div>

@@ -293,7 +293,7 @@ export default function Stck() {
             }}
           >
             <span className={cn(
-              "leading-none text-white tabular-nums drop-shadow-2xl",
+              "leading-none text-white tabular-nums drop-shadow-2xl font-display tracking-tighter",
               isMobile ? "text-[5rem]" : "text-[16rem] lg:text-[20rem]"
             )}>
               {formatHour(hours)}
@@ -305,7 +305,7 @@ export default function Stck() {
               :
             </span>
             <span className={cn(
-              "leading-none text-white tabular-nums drop-shadow-2xl",
+              "leading-none text-white tabular-nums drop-shadow-2xl font-display tracking-tighter",
               isMobile ? "text-[5rem]" : "text-[16rem] lg:text-[20rem]"
             )}>
               {minutes.toString().padStart(2, '0')}
