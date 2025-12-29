@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Folder, Plus, Star, Clock, Image } from 'lucide-react';
+import { Folder, Plus, Clock, Image } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { Card } from '@/components/ui/card';
@@ -17,9 +17,10 @@ interface Collection {
 interface FolderGridProps {
   onNavigateToAssets: () => void;
   onCollectionSelect?: (collectionId: string) => void;
+  showQuickAccess?: boolean;
 }
 
-export function FolderGrid({ onNavigateToAssets, onCollectionSelect }: FolderGridProps) {
+export function FolderGrid({ onNavigateToAssets, onCollectionSelect, showQuickAccess = true }: FolderGridProps) {
   const { currentBrand } = useBrandContext();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [recentAssetCount, setRecentAssetCount] = useState(0);
@@ -92,32 +93,34 @@ export function FolderGrid({ onNavigateToAssets, onCollectionSelect }: FolderGri
 
   return (
     <div className="space-y-6">
-      {/* Quick Access */}
-      <div>
-        <h3 className="text-sm font-medium text-muted-foreground mb-3">Quick Access</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {quickAccessFolders.map((folder) => {
-            const Icon = folder.icon;
-            return (
-              <button
-                key={folder.id}
-                onClick={onNavigateToAssets}
-                className="group p-4 bg-card border border-border rounded-2xl hover:bg-muted/50 hover:border-primary/20 transition-all duration-200 text-left"
-              >
-                <div className={cn("p-2 rounded-xl w-fit mb-3", folder.color)}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <p className="font-medium text-sm">{folder.name}</p>
-                {folder.count !== null && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {folder.count} {folder.count === 1 ? 'file' : 'files'}
-                  </p>
-                )}
-              </button>
-            );
-          })}
+      {/* Quick Access - conditionally rendered */}
+      {showQuickAccess && (
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">Quick Access</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {quickAccessFolders.map((folder) => {
+              const Icon = folder.icon;
+              return (
+                <button
+                  key={folder.id}
+                  onClick={onNavigateToAssets}
+                  className="group p-4 bg-card border border-border rounded-2xl hover:bg-muted/50 hover:border-primary/20 transition-all duration-200 text-left"
+                >
+                  <div className={cn("p-2 rounded-xl w-fit mb-3", folder.color)}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <p className="font-medium text-sm">{folder.name}</p>
+                  {folder.count !== null && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {folder.count} {folder.count === 1 ? 'file' : 'files'}
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Collections */}
       <div>
@@ -130,7 +133,7 @@ export function FolderGrid({ onNavigateToAssets, onCollectionSelect }: FolderGri
         </div>
         
         {collections.length === 0 ? (
-          <Card className="p-8 text-center">
+          <Card className="p-8 text-center border-dashed">
             <Folder className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground mb-3">
               No collections yet. Create one to organize your assets.

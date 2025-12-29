@@ -10,17 +10,18 @@ interface FldrHomeProps {
 
 export function FldrHome({ onNavigateToAssets, onNavigateToUpload }: FldrHomeProps) {
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in space-y-8">
       {/* Greeting + Clock + AI Insights */}
       <FldrGreeting />
 
-      {/* Folder Grid */}
-      <div className="mt-8">
-        <FolderGrid onNavigateToAssets={onNavigateToAssets} />
-      </div>
+      {/* Folder Grid - Collections only, no quick access */}
+      <FolderGrid 
+        onNavigateToAssets={onNavigateToAssets} 
+        showQuickAccess={false}
+      />
 
       {/* Bottom Grid: Activity Feed + Quick Upload */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ActivityFeedCard />
         <QuickUploadCard onNavigateToUpload={onNavigateToUpload} />
       </div>
