@@ -109,6 +109,53 @@ export type Database = {
           },
         ]
       }
+      asset_annotations: {
+        Row: {
+          asset_id: string
+          comment: string
+          created_at: string | null
+          id: string
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          user_id: string
+          x_percent: number
+          y_percent: number
+        }
+        Insert: {
+          asset_id: string
+          comment: string
+          created_at?: string | null
+          id?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          user_id: string
+          x_percent: number
+          y_percent: number
+        }
+        Update: {
+          asset_id?: string
+          comment?: string
+          created_at?: string | null
+          id?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          user_id?: string
+          x_percent?: number
+          y_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_annotations_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "creative_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_approvals: {
         Row: {
           asset_id: string
@@ -226,6 +273,8 @@ export type Database = {
           created_at: string
           id: string
           is_revision: boolean | null
+          mentions: string[] | null
+          parent_id: string | null
           user_id: string
         }
         Insert: {
@@ -234,6 +283,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_revision?: boolean | null
+          mentions?: string[] | null
+          parent_id?: string | null
           user_id: string
         }
         Update: {
@@ -242,6 +293,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_revision?: boolean | null
+          mentions?: string[] | null
+          parent_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -250,6 +303,13 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "creative_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "asset_comments"
             referencedColumns: ["id"]
           },
           {
@@ -958,6 +1018,7 @@ export type Database = {
           tags: string[] | null
           title: string | null
           updated_at: string
+          upload_session_id: string | null
           uploaded_by: string | null
           width: number | null
         }
@@ -980,6 +1041,7 @@ export type Database = {
           tags?: string[] | null
           title?: string | null
           updated_at?: string
+          upload_session_id?: string | null
           uploaded_by?: string | null
           width?: number | null
         }
@@ -1002,6 +1064,7 @@ export type Database = {
           tags?: string[] | null
           title?: string | null
           updated_at?: string
+          upload_session_id?: string | null
           uploaded_by?: string | null
           width?: number | null
         }
@@ -1011,6 +1074,13 @@ export type Database = {
             columns: ["brand_id"]
             isOneToOne: false
             referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_assets_upload_session_id_fkey"
+            columns: ["upload_session_id"]
+            isOneToOne: false
+            referencedRelation: "upload_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -1346,6 +1416,65 @@ export type Database = {
           },
         ]
       }
+      upload_sessions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          brand_id: string
+          created_at: string | null
+          detected_date_range: Json | null
+          file_count: number | null
+          id: string
+          metadata: Json | null
+          rejection_reason: string | null
+          source_folder_name: string | null
+          status: string | null
+          title: string | null
+          total_size: number | null
+          uploaded_by: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          brand_id: string
+          created_at?: string | null
+          detected_date_range?: Json | null
+          file_count?: number | null
+          id?: string
+          metadata?: Json | null
+          rejection_reason?: string | null
+          source_folder_name?: string | null
+          status?: string | null
+          title?: string | null
+          total_size?: number | null
+          uploaded_by: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          brand_id?: string
+          created_at?: string | null
+          detected_date_range?: Json | null
+          file_count?: number | null
+          id?: string
+          metadata?: Json | null
+          rejection_reason?: string | null
+          source_folder_name?: string | null
+          status?: string | null
+          title?: string | null
+          total_size?: number | null
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upload_sessions_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_activity_logs: {
         Row: {
           action: string
@@ -1531,6 +1660,7 @@ export type Database = {
           approved_by: string | null
           brand_id: string
           created_at: string
+          creative_role: string | null
           id: string
           requested_at: string
           role: string
@@ -1543,6 +1673,7 @@ export type Database = {
           approved_by?: string | null
           brand_id: string
           created_at?: string
+          creative_role?: string | null
           id?: string
           requested_at?: string
           role: string
@@ -1555,6 +1686,7 @@ export type Database = {
           approved_by?: string | null
           brand_id?: string
           created_at?: string
+          creative_role?: string | null
           id?: string
           requested_at?: string
           role?: string
@@ -1629,6 +1761,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_creative_role_level: {
+        Args: { _brand_id: string; _user_id: string }
+        Returns: number
+      }
+      has_creative_role: {
+        Args: { _brand_id: string; _role: string; _user_id: string }
+        Returns: boolean
+      }
       is_mj_admin: { Args: { _user_id: string }; Returns: boolean }
       user_has_brand_access: {
         Args: { _brand_id: string; _user_id: string }
