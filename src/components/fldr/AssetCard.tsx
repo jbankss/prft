@@ -39,18 +39,10 @@ interface AssetCardProps {
   onView: (asset: Asset) => void;
 }
 
-// Thumbnail size options for CDN optimization
-const THUMBNAIL_SIZES = {
-  small: { width: 200, height: 200, quality: 60 },
-  medium: { width: 400, height: 400, quality: 70 },
-  large: { width: 600, height: 600, quality: 80 },
-};
-
 export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
-  const [lowResLoaded, setLowResLoaded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Intersection Observer for lazy loading
@@ -75,24 +67,8 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
     return () => observer.disconnect();
   }, []);
 
-  // Get optimized thumbnail URL with Supabase transformations
-  const getThumbnailUrl = (size: 'small' | 'medium' | 'large' = 'medium') => {
-    const config = THUMBNAIL_SIZES[size];
-    const { data } = supabase.storage
-      .from(asset.bucket)
-      .getPublicUrl(asset.file_path, {
-        transform: {
-          width: config.width,
-          height: config.height,
-          quality: config.quality,
-          resize: 'cover'
-        }
-      });
-    return data.publicUrl;
-  };
-
-  // Get full resolution URL for download/view
-  const getFullUrl = () => {
+  // Get public URL for the asset (no transformations - works on all plans)
+  const getAssetUrl = () => {
     const { data } = supabase.storage
       .from(asset.bucket)
       .getPublicUrl(asset.file_path);
@@ -136,7 +112,7 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = getFullUrl();
+    const url = getAssetUrl();
     const link = document.createElement('a');
     link.href = url;
     link.download = asset.file_name;
@@ -187,26 +163,14 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
       <div className="aspect-square bg-muted relative overflow-hidden">
         {isImage && isInView ? (
           <>
-            {/* Low-res placeholder (loads fast) */}
+            {/* Shimmer placeholder while loading */}
             {!imageLoaded && (
               <div className="absolute inset-0 fldr-thumb-shimmer" />
             )}
             
-            {/* Low quality placeholder - loads first */}
-            {!lowResLoaded && (
-              <img
-                src={getThumbnailUrl('small')}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover blur-sm scale-105"
-                onLoad={() => setLowResLoaded(true)}
-                loading="eager"
-                decoding="async"
-              />
-            )}
-            
-            {/* High quality thumbnail */}
+            {/* Image thumbnail */}
             <img
-              src={getThumbnailUrl('medium')}
+              src={getAssetUrl()}
               alt={asset.title || asset.file_name}
               className={cn(
                 "absolute inset-0 w-full h-full object-cover transition-all duration-500",
@@ -220,7 +184,7 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
           </>
         ) : isVideo && isInView ? (
           <video
-            src={getFullUrl()}
+            src={getAssetUrl()}
             className="w-full h-full object-cover"
             muted
             playsInline
