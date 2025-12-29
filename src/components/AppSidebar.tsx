@@ -26,7 +26,7 @@ export function AppSidebar() {
   const items = [
     { title: 'Dashboard', url: '/', icon: Home },
     { title: 'Account Management', url: '/accounts', icon: Building2 },
-    { title: 'Photography & Creative', url: '/creative', icon: Image },
+    { title: 'fldr', url: '/creative', icon: Image },
     { title: 'Integrations', url: '/integrations', icon: Plug },
     ...(isMJAdmin ? [{ title: 'Approvals', url: '/approvals', icon: CheckCircle }] : []),
     { title: 'Profile', url: '/profile', icon: User },
