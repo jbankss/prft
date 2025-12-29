@@ -356,28 +356,14 @@ export function AssetMarketplace({ onRefresh }: AssetMarketplaceProps) {
       </div>
 
       {/* Lightbox */}
-      {selectedAsset && (
+      {selectedAsset && lightboxOpen && (
         <EnhancedAssetLightbox
           asset={selectedAsset}
-          isOpen={lightboxOpen}
           onClose={() => {
             setLightboxOpen(false);
             setSelectedAsset(null);
           }}
-          onPrevious={() => {
-            const currentIndex = filteredAssets.findIndex((a) => a.id === selectedAsset.id);
-            if (currentIndex > 0) {
-              setSelectedAsset(filteredAssets[currentIndex - 1]);
-            }
-          }}
-          onNext={() => {
-            const currentIndex = filteredAssets.findIndex((a) => a.id === selectedAsset.id);
-            if (currentIndex < filteredAssets.length - 1) {
-              setSelectedAsset(filteredAssets[currentIndex + 1]);
-            }
-          }}
-          hasPrevious={filteredAssets.findIndex((a) => a.id === selectedAsset.id) > 0}
-          hasNext={filteredAssets.findIndex((a) => a.id === selectedAsset.id) < filteredAssets.length - 1}
+          onRefresh={refetch}
         />
       )}
     </div>
