@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useBrandContext } from '@/hooks/useBrandContext';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/hooks/useAuth';
 import { ClipboardCheck } from 'lucide-react';
 import { IntegratedUpload } from '@/components/creative/IntegratedUpload';
 import { BulkActions } from '@/components/creative/BulkActions';
@@ -10,19 +11,21 @@ import { AnalyticsView } from '@/components/creative/AnalyticsView';
 import { FldrHome } from '@/components/fldr/FldrHome';
 import { FldrTopNav } from '@/components/fldr/FldrTopNav';
 import { AssetMarketplace } from '@/components/fldr/AssetMarketplace';
+import { FloatingAssistant } from '@/components/global/FloatingAssistant';
 import { cn } from '@/lib/utils';
+import fldrLogo from '@/assets/fldr-logo.png';
 
 type ViewType = 'overview' | 'assets' | 'upload' | 'analytics' | 'storage' | 'approvals';
 
 export default function Creative() {
-  const isMobile = useIsMobile();
-  const { currentBrand } = useBrandContext();
+  const { user, loading: authLoading } = useAuth();
+  const { currentBrand, availableBrands, loading: brandsLoading } = useBrandContext();
   const [collections, setCollections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<ViewType>('overview');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState(0);
-  const [hasEntered, setHasEntered] = useState(false);
+  const [portalPhase, setPortalPhase] = useState<'entering' | 'ready' | 'exiting'>('entering');
   const contentRef = useRef<HTMLDivElement>(null);
 
   const fetchCollections = async () => {
@@ -60,8 +63,6 @@ export default function Creative() {
       setLoading(true);
       Promise.all([fetchCollections(), fetchPendingApprovals()]).finally(() => {
         setLoading(false);
-        // Trigger entrance animation after load
-        setTimeout(() => setHasEntered(true), 100);
       });
 
       const channel = supabase
@@ -84,19 +85,67 @@ export default function Creative() {
     }
   }, [currentBrand]);
 
+  // Portal entrance animation sequence
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPortalPhase('ready');
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleRefresh = () => {
     fetchCollections();
     fetchPendingApprovals();
   };
 
-  if (loading) {
+  const handleExit = () => {
+    setPortalPhase('exiting');
+  };
+
+  // Auth checks
+  if (authLoading || brandsLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
-            <span className="text-2xl font-display font-bold text-primary">f</span>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" />;
+  }
+
+  if (availableBrands.length === 0) {
+    return <Navigate to="/" />;
+  }
+
+  // Loading state with portal animation
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
+        {/* Portal effect backdrop */}
+        <div className="absolute inset-0 fldr-portal-backdrop bg-background" />
+        
+        {/* Animated logo entrance */}
+        <div className="relative flex flex-col items-center gap-6 fldr-portal-enter">
+          {/* Glow rings */}
+          <div className="absolute inset-0 -m-20">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/10 via-accent/20 to-primary/10 blur-3xl animate-pulse" />
           </div>
-          <div className="text-sm text-muted-foreground animate-pulse">Loading fldr...</div>
+          
+          {/* Logo with gradient effect */}
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-accent/40 to-primary/30 rounded-3xl blur-2xl animate-gradient" />
+            <img 
+              src={fldrLogo} 
+              alt="fldr" 
+              className="relative h-24 w-auto dark:invert"
+            />
+          </div>
+          
+          <div className="text-sm text-muted-foreground animate-pulse">
+            Entering creative space...
+          </div>
         </div>
       </div>
     );
@@ -105,27 +154,36 @@ export default function Creative() {
   return (
     <div 
       className={cn(
-        "min-h-screen bg-background transition-all duration-700 ease-out",
-        hasEntered 
-          ? "opacity-100 scale-100" 
-          : "opacity-0 scale-95"
+        "min-h-screen bg-background",
+        portalPhase === 'entering' && "fldr-portal-enter",
+        portalPhase === 'exiting' && "fldr-portal-exit"
       )}
     >
-      {/* Animated Top Navigation */}
+      {/* Portal transition overlay during entrance */}
+      {portalPhase === 'entering' && (
+        <div className="fixed inset-0 pointer-events-none z-40">
+          <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background opacity-50" />
+        </div>
+      )}
+
+      {/* Fldr Navigation - the ONLY navigation visible */}
       <FldrTopNav 
         activeView={activeView}
         onViewChange={setActiveView}
         pendingApprovals={pendingApprovals}
+        onExit={handleExit}
       />
       
       {/* Main Content */}
       <main 
         ref={contentRef}
         className={cn(
-          "transition-all duration-500 ease-out",
-          hasEntered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          "transition-all duration-700 ease-out",
+          portalPhase === 'ready' 
+            ? "opacity-100 translate-y-0" 
+            : "opacity-0 translate-y-8"
         )}
-        style={{ transitionDelay: hasEntered ? '150ms' : '0ms' }}
+        style={{ transitionDelay: portalPhase === 'ready' ? '200ms' : '0ms' }}
       >
         <div className="p-4 md:p-6 lg:p-8">
           {/* Overview - FldrHome */}
@@ -176,6 +234,9 @@ export default function Creative() {
           {activeView === 'storage' && <StorageView />}
         </div>
       </main>
+
+      {/* Floating Assistant - available within fldr */}
+      <FloatingAssistant />
     </div>
   );
 }
