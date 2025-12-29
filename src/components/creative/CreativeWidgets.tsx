@@ -1,17 +1,19 @@
 import { Card } from '@/components/ui/card';
-import { Image, HardDrive, Clock, TrendingUp } from 'lucide-react';
+import { Image, HardDrive, Clock, TrendingUp, AlertCircle } from 'lucide-react';
 
 interface CreativeWidgetsProps {
   totalAssets: number;
   storageUsed: number;
   storageTotal: number;
   recentCount: number;
+  pendingApprovals?: number;
 }
 
-export function CreativeWidgets({ totalAssets, storageUsed, storageTotal, recentCount }: CreativeWidgetsProps) {
+export function CreativeWidgets({ totalAssets, storageUsed, storageTotal, recentCount, pendingApprovals = 0 }: CreativeWidgetsProps) {
   const storagePercent = Math.round((storageUsed / storageTotal) * 100);
   const storageUsedGB = (storageUsed / (1024 * 1024 * 1024)).toFixed(2);
   const storageTotalGB = (storageTotal / (1024 * 1024 * 1024)).toFixed(0);
+  const showPendingWidget = pendingApprovals > 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -51,14 +53,25 @@ export function CreativeWidgets({ totalAssets, storageUsed, storageTotal, recent
         <p className="text-sm text-muted-foreground">Uploads this week</p>
       </Card>
 
-      <Card className="p-8 bg-gold text-gold-foreground">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-sm font-medium uppercase tracking-wide opacity-90">Performance</h3>
-          <TrendingUp className="w-6 h-6 opacity-75" />
-        </div>
-        <div className="text-5xl font-display font-bold mb-2">+12%</div>
-        <p className="text-sm opacity-75">vs last month</p>
-      </Card>
+      {showPendingWidget ? (
+        <Card className="p-8 bg-amber-500 text-white">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-sm font-medium uppercase tracking-wide opacity-90">Pending Approval</h3>
+            <AlertCircle className="w-6 h-6 opacity-75" />
+          </div>
+          <div className="text-5xl font-display font-bold mb-2">{pendingApprovals}</div>
+          <p className="text-sm opacity-75">Sessions awaiting review</p>
+        </Card>
+      ) : (
+        <Card className="p-8 bg-gold text-gold-foreground">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-sm font-medium uppercase tracking-wide opacity-90">Performance</h3>
+            <TrendingUp className="w-6 h-6 opacity-75" />
+          </div>
+          <div className="text-5xl font-display font-bold mb-2">+12%</div>
+          <p className="text-sm opacity-75">vs last month</p>
+        </Card>
+      )}
     </div>
   );
 }

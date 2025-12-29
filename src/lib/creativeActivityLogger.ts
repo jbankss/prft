@@ -1,11 +1,30 @@
 import { supabase } from '@/integrations/supabase/client';
 
+export type CreativeAction = 
+  | 'uploaded_asset' 
+  | 'updated_asset' 
+  | 'deleted_asset' 
+  | 'created_collection' 
+  | 'updated_collection' 
+  | 'deleted_collection'
+  | 'approved_session'
+  | 'rejected_session'
+  | 'commented'
+  | 'annotated';
+
 export interface CreativeActivityData {
-  action: 'uploaded_asset' | 'updated_asset' | 'deleted_asset' | 'created_collection' | 'updated_collection' | 'deleted_collection';
-  entityType: 'asset' | 'collection';
+  action: CreativeAction;
+  entityType: 'asset' | 'collection' | 'session' | 'comment' | 'annotation';
   entityId: string;
   brandId: string;
-  metadata?: Record<string, any>;
+  metadata?: {
+    session_title?: string;
+    file_count?: number;
+    asset_title?: string;
+    collection_name?: string;
+    rejection_reason?: string;
+    [key: string]: any;
+  };
 }
 
 export async function logCreativeActivity(data: CreativeActivityData) {

@@ -15,6 +15,7 @@ import { BulkActions } from '@/components/creative/BulkActions';
 import { EnhancedAssetLightbox } from '@/components/creative/EnhancedAssetLightbox';
 import { StorageView } from '@/components/creative/StorageView';
 import { AnalyticsView } from '@/components/creative/AnalyticsView';
+import { ActivityFeed } from '@/components/creative/ActivityFeed';
 import { toast } from 'sonner';
 
 export default function Creative() {
@@ -30,6 +31,7 @@ export default function Creative() {
   const [status, setStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
   const fetchAssets = async () => {
     if (!currentBrand) return;
     try {
@@ -69,10 +71,26 @@ export default function Creative() {
       console.error('Failed to fetch collections:', error);
     }
   };
+
+  const fetchPendingApprovals = async () => {
+    if (!currentBrand) return;
+    try {
+      const { count, error } = await supabase
+        .from('upload_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('brand_id', currentBrand.id)
+        .eq('status', 'pending_approval');
+      if (error) throw error;
+      setPendingApprovals(count || 0);
+    } catch (error) {
+      console.error('Failed to fetch pending approvals:', error);
+    }
+  };
   useEffect(() => {
     if (currentBrand) {
       fetchAssets();
       fetchCollections();
+      fetchPendingApprovals();
       const channel = supabase.channel('creative-assets-changes').on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -81,7 +99,11 @@ export default function Creative() {
         event: '*',
         schema: 'public',
         table: 'asset_collections'
-      }, fetchCollections).subscribe();
+      }, fetchCollections).on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'upload_sessions'
+      }, fetchPendingApprovals).subscribe();
       return () => {
         supabase.removeChannel(channel);
       };
@@ -156,7 +178,7 @@ export default function Creative() {
 
           {/* Overview */}
           {activeView === 'overview' && <div className="space-y-6 md:space-y-8">
-              <CreativeWidgets totalAssets={assets.length} storageUsed={usedStorage} storageTotal={totalStorage} recentCount={recentCount} />
+              <CreativeWidgets totalAssets={assets.length} storageUsed={usedStorage} storageTotal={totalStorage} recentCount={recentCount} pendingApprovals={pendingApprovals} />
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
                 <div className="space-y-4 md:space-y-6">
@@ -183,6 +205,10 @@ export default function Creative() {
                       <p className="text-xs md:text-sm text-muted-foreground">Organize assets</p>
                     </button>
                   </div>
+                </div>
+
+                <div className="space-y-4 md:space-y-6">
+                  <ActivityFeed />
                 </div>
               </div>
             </div>}
