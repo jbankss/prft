@@ -1,35 +1,35 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
-import { Sun, Moon, Sunrise, Sunset, Coffee, Sparkles } from 'lucide-react';
+import { Sun, Moon, Sunrise, Sunset, Coffee, Sparkles, Image } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useStckMetrics } from '@/hooks/useStckMetrics';
+import { useFldrMetrics } from '@/hooks/useFldrMetrics';
 import { cn } from '@/lib/utils';
 
 const TIME_GREETINGS = {
   earlyMorning: [
-    "Early riser",
-    "Fresh start ahead",
-    "The quiet hours",
+    "Early creator",
+    "Dawn inspiration",
+    "Fresh canvas",
   ],
   morning: [
     "Good morning",
-    "Let's create something",
-    "Rise and design",
+    "Create something",
+    "Visual day ahead",
   ],
   afternoon: [
     "Good afternoon",
-    "Keep the creativity flowing",
-    "Afternoon inspiration",
+    "Keep creating",
+    "Afternoon vibes",
   ],
   evening: [
     "Good evening",
     "Evening session",
-    "Winding down beautifully",
+    "Creative wind-down",
   ],
   night: [
     "Night owl mode",
-    "Late night creativity",
-    "Burning the midnight oil",
+    "Midnight creativity",
+    "Late night edits",
   ],
 };
 
@@ -39,19 +39,19 @@ function getTimeGreeting(hour: number): { greeting: string; icon: React.ReactNod
 
   if (hour >= 5 && hour < 7) {
     greetings = TIME_GREETINGS.earlyMorning;
-    icon = <Sunrise className="h-5 w-5 text-amber-400" />;
+    icon = <Sunrise className="h-4 w-4 text-amber-400" />;
   } else if (hour >= 7 && hour < 12) {
     greetings = TIME_GREETINGS.morning;
-    icon = <Coffee className="h-5 w-5 text-orange-400" />;
+    icon = <Coffee className="h-4 w-4 text-orange-400" />;
   } else if (hour >= 12 && hour < 17) {
     greetings = TIME_GREETINGS.afternoon;
-    icon = <Sun className="h-5 w-5 text-yellow-500" />;
+    icon = <Sun className="h-4 w-4 text-yellow-500" />;
   } else if (hour >= 17 && hour < 21) {
     greetings = TIME_GREETINGS.evening;
-    icon = <Sunset className="h-5 w-5 text-orange-500" />;
+    icon = <Sunset className="h-4 w-4 text-orange-500" />;
   } else {
     greetings = TIME_GREETINGS.night;
-    icon = <Moon className="h-5 w-5 text-indigo-400" />;
+    icon = <Moon className="h-4 w-4 text-indigo-400" />;
   }
 
   const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
@@ -60,7 +60,7 @@ function getTimeGreeting(hour: number): { greeting: string; icon: React.ReactNod
 
 export function FldrGreeting() {
   const { user } = useAuth();
-  const { funFacts } = useStckMetrics();
+  const { funFacts } = useFldrMetrics();
   const [time, setTime] = useState(new Date());
   const [greetingData, setGreetingData] = useState(() => getTimeGreeting(new Date().getHours()));
   const [hasEntered, setHasEntered] = useState(false);
@@ -105,8 +105,8 @@ export function FldrGreeting() {
       setTimeout(() => {
         setCurrentFactIndex(prev => (prev + 1) % funFacts.length);
         setFactVisible(true);
-      }, 500);
-    }, 8000);
+      }, 400);
+    }, 6000);
 
     return () => clearInterval(interval);
   }, [funFacts.length]);
@@ -122,11 +122,11 @@ export function FldrGreeting() {
   return (
     <div 
       className={cn(
-        "flex flex-col items-center gap-6 py-8 md:py-12 transition-all duration-700",
+        "flex flex-col items-center gap-4 py-6 transition-all duration-700",
         hasEntered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
       )}
     >
-      {/* Greeting with icon - subtle */}
+      {/* Greeting header with icon */}
       <div 
         className={cn(
           "flex items-center gap-2 text-muted-foreground transition-all duration-700 delay-100",
@@ -137,59 +137,52 @@ export function FldrGreeting() {
         <span className="text-sm font-medium">
           {greetingData.greeting}{firstName ? `, ${firstName}` : ''}
         </span>
+        <span className="text-xs text-muted-foreground/60 ml-2">
+          {format(time, 'EEEE, MMM d')}
+        </span>
       </div>
 
-      {/* Date - small */}
-      <p 
-        className={cn(
-          "text-xs text-muted-foreground/70 uppercase tracking-widest transition-all duration-700 delay-150",
-          hasEntered ? "opacity-100" : "opacity-0"
-        )}
-      >
-        {format(time, 'EEEE, MMMM d')}
-      </p>
-
-      {/* Giant centered clock with seconds */}
+      {/* Compact clock */}
       <div 
         className={cn(
-          "flex items-baseline justify-center transition-all duration-700 delay-200",
+          "flex items-baseline justify-center transition-all duration-700 delay-150",
           hasEntered ? "opacity-100 scale-100" : "opacity-0 scale-95"
         )}
       >
-        <span className="text-[6rem] md:text-[10rem] lg:text-[14rem] font-bold tabular-nums font-display leading-none tracking-tighter text-foreground">
+        <span className="text-5xl md:text-7xl font-bold tabular-nums font-display leading-none tracking-tight text-foreground">
           {hour12}
         </span>
-        <span className="text-[4rem] md:text-[7rem] lg:text-[10rem] font-bold text-muted-foreground/30 mx-1 animate-pulse leading-none">
+        <span className="text-3xl md:text-5xl font-bold text-muted-foreground/40 mx-0.5 animate-pulse leading-none">
           :
         </span>
-        <span className="text-[6rem] md:text-[10rem] lg:text-[14rem] font-bold tabular-nums font-display leading-none tracking-tighter text-foreground">
+        <span className="text-5xl md:text-7xl font-bold tabular-nums font-display leading-none tracking-tight text-foreground">
           {minutes.toString().padStart(2, '0')}
         </span>
-        <div className="flex flex-col ml-3 md:ml-4 gap-1">
-          <span className="text-2xl md:text-4xl lg:text-5xl font-bold tabular-nums text-muted-foreground/50 leading-none">
+        <div className="flex flex-col ml-2 gap-0.5">
+          <span className="text-lg md:text-2xl font-bold tabular-nums text-muted-foreground/50 leading-none">
             {seconds.toString().padStart(2, '0')}
           </span>
-          <span className="text-xs md:text-sm font-medium text-muted-foreground/40 tracking-wider">
+          <span className="text-[10px] md:text-xs font-medium text-muted-foreground/40 tracking-wider">
             {amPm}
           </span>
         </div>
       </div>
 
-      {/* AI Insights - fun fact popup */}
+      {/* AI Insights - fldr specific */}
       {currentFact && (
         <div 
           className={cn(
-            "flex items-center gap-3 px-5 py-3 bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-sm transition-all duration-500 max-w-md",
-            hasEntered ? "opacity-100 translate-y-0 delay-300" : "opacity-0 translate-y-4",
-            factVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            "flex items-center gap-2.5 px-4 py-2.5 bg-card/60 backdrop-blur-sm rounded-xl border border-border/40 shadow-sm transition-all duration-400 max-w-sm",
+            hasEntered ? "opacity-100 translate-y-0 delay-200" : "opacity-0 translate-y-2",
+            factVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
           )}
         >
-          <div className="p-2 rounded-xl bg-primary/10">
-            <Sparkles className="h-4 w-4 text-primary" />
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Image className="h-3.5 w-3.5 text-primary" />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-lg">{currentFact.emoji}</span>
-            <span className="text-sm text-muted-foreground">{currentFact.text}</span>
+            <span className="text-base">{currentFact.emoji}</span>
+            <span className="text-xs text-muted-foreground">{currentFact.text}</span>
           </div>
         </div>
       )}
