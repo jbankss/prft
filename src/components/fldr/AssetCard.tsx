@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Download, Plus, Share2, Eye, MoreHorizontal, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -39,11 +39,60 @@ interface AssetCardProps {
   onView: (asset: Asset) => void;
 }
 
+// Thumbnail size options for CDN optimization
+const THUMBNAIL_SIZES = {
+  small: { width: 200, height: 200, quality: 60 },
+  medium: { width: 400, height: 400, quality: 70 },
+  large: { width: 600, height: 600, quality: 80 },
+};
+
 export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const [lowResLoaded, setLowResLoaded] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
-  const getPublicUrl = () => {
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      {
+        rootMargin: '100px', // Start loading slightly before in view
+        threshold: 0.1
+      }
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Get optimized thumbnail URL with Supabase transformations
+  const getThumbnailUrl = (size: 'small' | 'medium' | 'large' = 'medium') => {
+    const config = THUMBNAIL_SIZES[size];
+    const { data } = supabase.storage
+      .from(asset.bucket)
+      .getPublicUrl(asset.file_path, {
+        transform: {
+          width: config.width,
+          height: config.height,
+          quality: config.quality,
+          resize: 'cover'
+        }
+      });
+    return data.publicUrl;
+  };
+
+  // Get full resolution URL for download/view
+  const getFullUrl = () => {
     const { data } = supabase.storage
       .from(asset.bucket)
       .getPublicUrl(asset.file_path);
@@ -87,7 +136,7 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = getPublicUrl();
+    const url = getFullUrl();
     const link = document.createElement('a');
     link.href = url;
     link.download = asset.file_name;
@@ -98,6 +147,7 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
 
   return (
     <Card
+      ref={cardRef}
       className={cn(
         "group relative overflow-hidden cursor-pointer transition-all duration-300",
         isSelected && "ring-2 ring-primary",
@@ -135,28 +185,46 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
 
       {/* Thumbnail */}
       <div className="aspect-square bg-muted relative overflow-hidden">
-        {isImage ? (
+        {isImage && isInView ? (
           <>
+            {/* Low-res placeholder (loads fast) */}
             {!imageLoaded && (
-              <div className="absolute inset-0 bg-muted animate-pulse" />
+              <div className="absolute inset-0 fldr-thumb-shimmer" />
             )}
+            
+            {/* Low quality placeholder - loads first */}
+            {!lowResLoaded && (
+              <img
+                src={getThumbnailUrl('small')}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover blur-sm scale-105"
+                onLoad={() => setLowResLoaded(true)}
+                loading="eager"
+                decoding="async"
+              />
+            )}
+            
+            {/* High quality thumbnail */}
             <img
-              src={getPublicUrl()}
+              src={getThumbnailUrl('medium')}
               alt={asset.title || asset.file_name}
               className={cn(
-                "w-full h-full object-cover transition-all duration-500",
+                "absolute inset-0 w-full h-full object-cover transition-all duration-500",
                 isHovered && "scale-110",
                 imageLoaded ? "opacity-100" : "opacity-0"
               )}
               onLoad={() => setImageLoaded(true)}
               loading="lazy"
+              decoding="async"
             />
           </>
-        ) : isVideo ? (
+        ) : isVideo && isInView ? (
           <video
-            src={getPublicUrl()}
+            src={getFullUrl()}
             className="w-full h-full object-cover"
             muted
+            playsInline
+            preload="metadata"
             onMouseEnter={(e) => e.currentTarget.play()}
             onMouseLeave={(e) => {
               e.currentTarget.pause();
@@ -165,9 +233,13 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            <span className="text-2xl font-bold uppercase">
-              {asset.file_type.split('/')[1]?.slice(0, 4) || 'FILE'}
-            </span>
+            {!isInView ? (
+              <div className="w-full h-full fldr-thumb-shimmer" />
+            ) : (
+              <span className="text-2xl font-bold uppercase">
+                {asset.file_type.split('/')[1]?.slice(0, 4) || 'FILE'}
+              </span>
+            )}
           </div>
         )}
 

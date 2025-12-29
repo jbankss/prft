@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, Grid3X3, LayoutGrid, SortAsc, SortDesc, Filter as FilterIcon } from 'lucide-react';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { useAssetCache } from '@/hooks/useAssetCache';
@@ -10,6 +10,7 @@ import { FilterSidebar, FilterState } from './FilterSidebar';
 import { AssetCard } from './AssetCard';
 import { EnhancedAssetLightbox } from '@/components/creative/EnhancedAssetLightbox';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { classifyTags, getDynamicColorOptions, getDynamicMoodOptions, getDynamicStyleOptions } from '@/lib/tagClassifier';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_FILTERS: FilterState = {
@@ -21,7 +22,6 @@ const DEFAULT_FILTERS: FilterState = {
   collections: [],
   statuses: [],
   dateRange: 'all',
-  tags: [],
 };
 
 interface AssetMarketplaceProps {
@@ -43,16 +43,24 @@ export function AssetMarketplace({ onRefresh }: AssetMarketplaceProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // Extract all unique tags
-  const availableTags = useMemo(() => {
-    const tagSet = new Set<string>();
+  // Extract and classify all unique tags from assets
+  const { classifiedTags, dynamicColorOptions, dynamicMoodOptions, dynamicStyleOptions } = useMemo(() => {
+    const allTags: string[] = [];
     assets.forEach((asset) => {
-      asset.tags?.forEach((tag) => tagSet.add(tag));
+      asset.tags?.forEach((tag) => allTags.push(tag));
     });
-    return Array.from(tagSet).sort();
+    
+    const classified = classifyTags(allTags);
+    
+    return {
+      classifiedTags: classified,
+      dynamicColorOptions: getDynamicColorOptions(classified),
+      dynamicMoodOptions: getDynamicMoodOptions(classified),
+      dynamicStyleOptions: getDynamicStyleOptions(classified),
+    };
   }, [assets]);
 
-  // Count active filters
+  // Count active filters (removed tags from count since we removed that section)
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.colors.length) count++;
@@ -63,7 +71,6 @@ export function AssetMarketplace({ onRefresh }: AssetMarketplaceProps) {
     if (filters.collections.length) count++;
     if (filters.statuses.length) count++;
     if (filters.dateRange !== 'all') count++;
-    if (filters.tags.length) count++;
     return count;
   }, [filters]);
 
@@ -71,7 +78,7 @@ export function AssetMarketplace({ onRefresh }: AssetMarketplaceProps) {
   const filteredAssets = useMemo(() => {
     let result = [...assets];
 
-    // Search filter
+    // Search filter - includes searching through tags
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -117,6 +124,46 @@ export function AssetMarketplace({ onRefresh }: AssetMarketplaceProps) {
       });
     }
 
+    // Color filter - match against classified color tags
+    if (filters.colors.length) {
+      result = result.filter((asset) => {
+        if (!asset.tags) return false;
+        return filters.colors.some((colorId) => {
+          // Check if any of the asset's tags classify as this color
+          return asset.tags?.some((tag) => {
+            const normalized = tag.toLowerCase().replace(/[-_]/g, ' ');
+            return normalized.includes(colorId.replace('-', ' '));
+          });
+        });
+      });
+    }
+
+    // Mood filter - match against classified mood tags
+    if (filters.moods.length) {
+      result = result.filter((asset) => {
+        if (!asset.tags) return false;
+        return filters.moods.some((moodId) => {
+          return asset.tags?.some((tag) => {
+            const normalized = tag.toLowerCase();
+            return normalized.includes(moodId);
+          });
+        });
+      });
+    }
+
+    // Style filter - match against classified style tags
+    if (filters.styles.length) {
+      result = result.filter((asset) => {
+        if (!asset.tags) return false;
+        return filters.styles.some((styleId) => {
+          return asset.tags?.some((tag) => {
+            const normalized = tag.toLowerCase();
+            return normalized.includes(styleId);
+          });
+        });
+      });
+    }
+
     // Date range filter
     if (filters.dateRange !== 'all') {
       const now = new Date();
@@ -138,13 +185,6 @@ export function AssetMarketplace({ onRefresh }: AssetMarketplaceProps) {
           cutoff = new Date(0);
       }
       result = result.filter((asset) => new Date(asset.created_at) >= cutoff);
-    }
-
-    // Tags filter
-    if (filters.tags.length) {
-      result = result.filter((asset) =>
-        filters.tags.some((tag) => asset.tags?.includes(tag))
-      );
     }
 
     // Sort
@@ -188,7 +228,9 @@ export function AssetMarketplace({ onRefresh }: AssetMarketplaceProps) {
       filters={filters}
       onFiltersChange={setFilters}
       collections={collections}
-      availableTags={availableTags}
+      dynamicColors={dynamicColorOptions}
+      dynamicMoods={dynamicMoodOptions}
+      dynamicStyles={dynamicStyleOptions}
       activeFilterCount={activeFilterCount}
       onClearFilters={clearFilters}
     />
@@ -212,7 +254,7 @@ export function AssetMarketplace({ onRefresh }: AssetMarketplaceProps) {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search assets..."
+                placeholder="Search assets, tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -309,7 +351,7 @@ export function AssetMarketplace({ onRefresh }: AssetMarketplaceProps) {
               )}
             >
               {[...Array(12)].map((_, i) => (
-                <div key={i} className="aspect-square bg-muted animate-pulse rounded-xl" />
+                <div key={i} className="aspect-square fldr-thumb-shimmer rounded-xl" />
               ))}
             </div>
           ) : filteredAssets.length === 0 ? (

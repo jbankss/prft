@@ -11,8 +11,7 @@ import {
   FileType, 
   Folder, 
   CheckCircle, 
-  Calendar,
-  Tag
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -29,19 +28,32 @@ export interface FilterState {
   collections: string[];
   statuses: string[];
   dateRange: string;
-  tags: string[];
+}
+
+interface DynamicColorOption {
+  id: string;
+  label: string;
+  color: string;
+}
+
+interface DynamicOption {
+  id: string;
+  label: string;
 }
 
 interface FilterSidebarProps {
   filters: FilterState;
   onFiltersChange: (filters: FilterState) => void;
   collections: { id: string; name: string }[];
-  availableTags: string[];
+  dynamicColors?: DynamicColorOption[];
+  dynamicMoods?: DynamicOption[];
+  dynamicStyles?: DynamicOption[];
   activeFilterCount: number;
   onClearFilters: () => void;
 }
 
-const COLOR_OPTIONS = [
+// Fallback static options if no dynamic ones available
+const FALLBACK_COLOR_OPTIONS = [
   { id: 'red', label: 'Red', color: '#ef4444' },
   { id: 'orange', label: 'Orange', color: '#f97316' },
   { id: 'yellow', label: 'Yellow', color: '#eab308' },
@@ -50,8 +62,6 @@ const COLOR_OPTIONS = [
   { id: 'purple', label: 'Purple', color: '#a855f7' },
   { id: 'pink', label: 'Pink', color: '#ec4899' },
   { id: 'gray', label: 'Gray', color: '#6b7280' },
-  { id: 'black', label: 'Black', color: '#171717' },
-  { id: 'white', label: 'White', color: '#fafafa' },
 ];
 
 const SIZE_OPTIONS = [
@@ -61,7 +71,7 @@ const SIZE_OPTIONS = [
   { id: '4k', label: '4K+', description: '8+ MP' },
 ];
 
-const STYLE_OPTIONS = [
+const FALLBACK_STYLE_OPTIONS = [
   { id: 'minimal', label: 'Minimal' },
   { id: 'bold', label: 'Bold' },
   { id: 'vibrant', label: 'Vibrant' },
@@ -69,7 +79,7 @@ const STYLE_OPTIONS = [
   { id: 'monochrome', label: 'Monochrome' },
 ];
 
-const MOOD_OPTIONS = [
+const FALLBACK_MOOD_OPTIONS = [
   { id: 'professional', label: 'Professional' },
   { id: 'casual', label: 'Casual' },
   { id: 'energetic', label: 'Energetic' },
@@ -104,9 +114,10 @@ interface FilterSectionProps {
   icon: React.ReactNode;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  badge?: number;
 }
 
-function FilterSection({ title, icon, children, defaultOpen = true }: FilterSectionProps) {
+function FilterSection({ title, icon, children, defaultOpen = true, badge }: FilterSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -118,6 +129,11 @@ function FilterSection({ title, icon, children, defaultOpen = true }: FilterSect
         <div className="flex items-center gap-2">
           {icon}
           <span>{title}</span>
+          {badge && badge > 0 && (
+            <Badge variant="secondary" className="h-4 px-1 text-[9px]">
+              {badge}
+            </Badge>
+          )}
         </div>
         {isOpen ? (
           <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -134,7 +150,9 @@ export function FilterSidebar({
   filters,
   onFiltersChange,
   collections,
-  availableTags,
+  dynamicColors = [],
+  dynamicMoods = [],
+  dynamicStyles = [],
   activeFilterCount,
   onClearFilters,
 }: FilterSidebarProps) {
@@ -153,6 +171,19 @@ export function FilterSidebar({
       onFiltersChange({ ...filters, [key]: value });
     }
   };
+
+  // Merge dynamic options with fallbacks, ensuring no duplicates
+  const colorOptions = dynamicColors.length > 0 
+    ? dynamicColors 
+    : FALLBACK_COLOR_OPTIONS;
+  
+  const moodOptions = dynamicMoods.length > 0
+    ? dynamicMoods
+    : FALLBACK_MOOD_OPTIONS;
+    
+  const styleOptions = dynamicStyles.length > 0
+    ? dynamicStyles
+    : FALLBACK_STYLE_OPTIONS;
 
   return (
     <div className="w-64 bg-card border-r border-border h-full">
@@ -183,28 +214,40 @@ export function FilterSidebar({
 
       <ScrollArea className="h-[calc(100vh-12rem)]">
         <div className="p-4 space-y-2">
-          {/* Colors */}
+          {/* Colors - Dynamic from AI tags */}
           <FilterSection
             title="Colors"
             icon={<Palette className="h-4 w-4" />}
+            badge={dynamicColors.length}
             defaultOpen
           >
             <div className="flex flex-wrap gap-2">
-              {COLOR_OPTIONS.map((color) => (
+              {colorOptions.map((color) => (
                 <button
                   key={color.id}
                   onClick={() => updateFilter('colors', color.id)}
                   className={cn(
-                    "w-7 h-7 rounded-full border-2 transition-all hover:scale-110",
+                    "w-7 h-7 rounded-full border-2 transition-all hover:scale-110 relative",
                     filters.colors.includes(color.id)
                       ? "border-primary ring-2 ring-primary/20"
                       : "border-transparent"
                   )}
                   style={{ backgroundColor: color.color }}
                   title={color.label}
-                />
+                >
+                  {filters.colors.includes(color.id) && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <span className="w-2 h-2 bg-white rounded-full shadow" />
+                    </span>
+                  )}
+                </button>
               ))}
             </div>
+            {dynamicColors.length > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-2">
+                Colors detected from your assets
+              </p>
+            )}
           </FilterSection>
 
           {/* Size/Resolution */}
@@ -231,13 +274,14 @@ export function FilterSidebar({
             ))}
           </FilterSection>
 
-          {/* Style */}
+          {/* Style - Dynamic from AI tags */}
           <FilterSection
             title="Style"
             icon={<Sparkles className="h-4 w-4" />}
+            badge={dynamicStyles.length}
           >
             <div className="flex flex-wrap gap-1.5">
-              {STYLE_OPTIONS.map((style) => (
+              {styleOptions.map((style) => (
                 <button
                   key={style.id}
                   onClick={() => updateFilter('styles', style.id)}
@@ -254,10 +298,14 @@ export function FilterSidebar({
             </div>
           </FilterSection>
 
-          {/* Mood */}
-          <FilterSection title="Mood" icon={<Heart className="h-4 w-4" />}>
+          {/* Mood - Dynamic from AI tags */}
+          <FilterSection 
+            title="Mood" 
+            icon={<Heart className="h-4 w-4" />}
+            badge={dynamicMoods.length}
+          >
             <div className="flex flex-wrap gap-1.5">
-              {MOOD_OPTIONS.map((mood) => (
+              {moodOptions.map((mood) => (
                 <button
                   key={mood.id}
                   onClick={() => updateFilter('moods', mood.id)}
@@ -363,28 +411,6 @@ export function FilterSidebar({
               </button>
             ))}
           </FilterSection>
-
-          {/* Tags */}
-          {availableTags.length > 0 && (
-            <FilterSection title="Tags" icon={<Tag className="h-4 w-4" />}>
-              <div className="flex flex-wrap gap-1.5">
-                {availableTags.slice(0, 15).map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => updateFilter('tags', tag)}
-                    className={cn(
-                      "px-2 py-0.5 text-xs rounded-md border transition-all",
-                      filters.tags.includes(tag)
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            </FilterSection>
-          )}
         </div>
       </ScrollArea>
     </div>
