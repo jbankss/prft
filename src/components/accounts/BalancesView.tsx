@@ -18,7 +18,7 @@ interface BalanceMetrics {
 }
 
 export function BalancesView({ brandId }: { brandId: string }) {
-  const { inflateNumber, inflateString } = useMockupMode();
+  const { inflateNumber, inflateString, sessionSeed } = useMockupMode();
   const [balances, setBalances] = useState<BalanceMetrics[]>([]);
   const [totals, setTotals] = useState({
     totalCOGS: 0,

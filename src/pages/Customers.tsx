@@ -2,9 +2,11 @@ import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBrandContext } from '@/hooks/useBrandContext';
+import { useMockupMode } from '@/hooks/useMockupMode';
 
 export default function Customers() {
   const { currentBrand } = useBrandContext();
+  const { inflateNumber, inflateString, sessionSeed } = useMockupMode();
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['customers', currentBrand?.id],
@@ -37,6 +39,14 @@ export default function Customers() {
     enabled: !!currentBrand?.id,
   });
 
+  // Apply mockup mode inflation
+  const inflatedCustomers = orders?.map((buyer: any) => ({
+    ...buyer,
+    name: inflateString(buyer.name, 'customer') || buyer.name,
+    totalSpent: inflateNumber(buyer.totalSpent, 'revenue'),
+    orderCount: inflateNumber(buyer.orderCount, 'orders'),
+  }));
+
   if (isLoading) {
     return <div className="flex justify-center p-12">Loading...</div>;
   }
@@ -46,8 +56,8 @@ export default function Customers() {
       <h1 className="text-3xl font-bold">Customers</h1>
       <Card className="p-6">
         <div className="space-y-4">
-          {orders?.map((buyer: any) => (
-            <div key={buyer.name} className="flex items-center justify-between p-4 border rounded-lg">
+          {inflatedCustomers?.map((buyer: any, index: number) => (
+            <div key={`${buyer.name}-${index}`} className="flex items-center justify-between p-4 border rounded-lg">
               <div>
                 <div className="font-medium">{buyer.name}</div>
                 <div className="text-sm text-muted-foreground">{buyer.email}</div>

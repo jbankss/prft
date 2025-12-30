@@ -9,49 +9,74 @@ import { useUnsplashBackground } from '@/hooks/useUnsplashBackground';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
-type NamePosition = 'before' | 'after' | 'none';
+type NamePosition = 'before' | 'after' | 'none' | 'lastName' | 'lastNameBefore';
 
 interface GreetingItem {
   text: string;
   namePosition: NamePosition;
 }
 
-// Greetings structured for proper grammar
+// Greetings structured for proper grammar - expanded with more variety
 const TIME_GREETINGS: Record<string, GreetingItem[]> = {
   earlyMorning: [
-    { text: "Early bird gets the worm", namePosition: 'none' as NamePosition },
-    { text: "Rise and grind", namePosition: 'before' as NamePosition },
-    { text: "The world is quiet — time to make moves", namePosition: 'none' as NamePosition },
-    { text: "While they sleep, you build", namePosition: 'none' as NamePosition },
-    { text: "First one up, first one paid", namePosition: 'none' as NamePosition },
+    { text: "Early bird gets the worm", namePosition: 'none' },
+    { text: "Rise and grind", namePosition: 'before' },
+    { text: "The world is quiet — time to make moves", namePosition: 'none' },
+    { text: "While they sleep, you build", namePosition: 'none' },
+    { text: "First one up, first one paid", namePosition: 'none' },
+    { text: "Dawn hustle", namePosition: 'lastNameBefore' },
+    { text: "The early hours belong to the ambitious", namePosition: 'none' },
+    { text: "Building empires before breakfast", namePosition: 'none' },
+    { text: "The grind starts now", namePosition: 'none' },
+    { text: "Quiet mornings, loud results", namePosition: 'none' },
   ],
   morning: [
-    { text: "Good morning", namePosition: 'after' as NamePosition },
-    { text: "Fresh start today", namePosition: 'before' as NamePosition },
-    { text: "Let's make today count", namePosition: 'before' as NamePosition },
-    { text: "Coffee's hot, orders are hotter", namePosition: 'none' as NamePosition },
-    { text: "Time to get after it", namePosition: 'before' as NamePosition },
+    { text: "Good morning", namePosition: 'after' },
+    { text: "Fresh start today", namePosition: 'before' },
+    { text: "Let's make today count", namePosition: 'before' },
+    { text: "Coffee's hot, orders are hotter", namePosition: 'none' },
+    { text: "Time to get after it", namePosition: 'before' },
+    { text: "Morning momentum", namePosition: 'lastName' },
+    { text: "Another day, another opportunity", namePosition: 'none' },
+    { text: "The morning sun brings new sales", namePosition: 'none' },
+    { text: "Start strong, finish stronger", namePosition: 'none' },
+    { text: "Good morning", namePosition: 'lastName' },
   ],
   afternoon: [
-    { text: "Good afternoon", namePosition: 'after' as NamePosition },
-    { text: "Keep the momentum going", namePosition: 'before' as NamePosition },
-    { text: "Halfway there, staying strong", namePosition: 'none' as NamePosition },
-    { text: "Afternoon push", namePosition: 'before' as NamePosition },
-    { text: "Crushing it today", namePosition: 'before' as NamePosition },
+    { text: "Good afternoon", namePosition: 'after' },
+    { text: "Keep the momentum going", namePosition: 'before' },
+    { text: "Halfway there, staying strong", namePosition: 'none' },
+    { text: "Afternoon push", namePosition: 'before' },
+    { text: "Crushing it today", namePosition: 'before' },
+    { text: "Peak hours, peak performance", namePosition: 'none' },
+    { text: "The grind continues", namePosition: 'none' },
+    { text: "Midday motivation", namePosition: 'lastName' },
+    { text: "Keep stacking those wins", namePosition: 'none' },
+    { text: "Afternoon excellence", namePosition: 'lastName' },
   ],
   evening: [
-    { text: "Good evening", namePosition: 'after' as NamePosition },
-    { text: "Wrapping up strong", namePosition: 'before' as NamePosition },
-    { text: "Another solid day", namePosition: 'before' as NamePosition },
-    { text: "Evening wind-down", namePosition: 'before' as NamePosition },
-    { text: "Great work today", namePosition: 'before' as NamePosition },
+    { text: "Good evening", namePosition: 'after' },
+    { text: "Wrapping up strong", namePosition: 'before' },
+    { text: "Another solid day", namePosition: 'before' },
+    { text: "Evening wind-down", namePosition: 'before' },
+    { text: "Great work today", namePosition: 'before' },
+    { text: "Sunset, but the grind doesn't stop", namePosition: 'none' },
+    { text: "Evening review time", namePosition: 'lastName' },
+    { text: "Closing strong", namePosition: 'none' },
+    { text: "End of day excellence", namePosition: 'none' },
+    { text: "Good evening", namePosition: 'lastName' },
   ],
   night: [
-    { text: "Burning the midnight oil", namePosition: 'before' as NamePosition },
-    { text: "Night owl mode", namePosition: 'before' as NamePosition },
-    { text: "The quiet hours are for builders", namePosition: 'none' as NamePosition },
-    { text: "Late night grind", namePosition: 'before' as NamePosition },
-    { text: "Nocturnal productivity", namePosition: 'before' as NamePosition },
+    { text: "Burning the midnight oil", namePosition: 'before' },
+    { text: "Night owl mode", namePosition: 'before' },
+    { text: "The quiet hours are for builders", namePosition: 'none' },
+    { text: "Late night grind", namePosition: 'before' },
+    { text: "Nocturnal productivity", namePosition: 'before' },
+    { text: "Moonlight hustle", namePosition: 'lastName' },
+    { text: "The night shift of success", namePosition: 'none' },
+    { text: "Stars are out, so is your drive", namePosition: 'none' },
+    { text: "Working while the world sleeps", namePosition: 'none' },
+    { text: "Night mode activated", namePosition: 'lastName' },
   ],
 };
 
@@ -80,16 +105,39 @@ function getTimeGreeting(hour: number): { greeting: GreetingItem; icon: React.Re
   return { greeting: randomGreeting, icon };
 }
 
-function formatGreeting(greeting: GreetingItem, firstName: string): string {
-  if (!firstName || greeting.namePosition === 'none') {
+function formatGreeting(greeting: GreetingItem, firstName: string, lastName: string): string {
+  // No name at all
+  if (greeting.namePosition === 'none') {
     return greeting.text;
   }
   
+  // Use last name only
+  if (greeting.namePosition === 'lastName' && lastName) {
+    return `${greeting.text}, ${lastName}`;
+  }
+  
+  if (greeting.namePosition === 'lastNameBefore' && lastName) {
+    return `${lastName}, ${greeting.text.toLowerCase()}`;
+  }
+  
+  // Fall back to first name if last name not available for lastName positions
+  if ((greeting.namePosition === 'lastName' || greeting.namePosition === 'lastNameBefore') && !lastName && firstName) {
+    return greeting.namePosition === 'lastNameBefore' 
+      ? `${firstName}, ${greeting.text.toLowerCase()}`
+      : `${greeting.text}, ${firstName}`;
+  }
+  
+  // No name available
+  if (!firstName) {
+    return greeting.text;
+  }
+  
+  // First name before
   if (greeting.namePosition === 'before') {
     return `${firstName}, ${greeting.text.toLowerCase()}`;
   }
   
-  // after
+  // First name after
   return `${greeting.text}, ${firstName}`;
 }
 
@@ -113,15 +161,22 @@ export default function Stck() {
   const [isExiting, setIsExiting] = useState(false);
   const [hasEntered, setHasEntered] = useState(false);
 
-  // Get user's first name
-  const firstName = useMemo(() => {
+  // Get user's first and last name
+  const { firstName, lastName } = useMemo(() => {
     if (user?.user_metadata?.full_name) {
-      return user.user_metadata.full_name.split(' ')[0];
+      const parts = user.user_metadata.full_name.split(' ');
+      return {
+        firstName: parts[0] || '',
+        lastName: parts.length > 1 ? parts[parts.length - 1] : ''
+      };
     }
     if (user?.email) {
-      return user.email.split('@')[0];
+      return {
+        firstName: user.email.split('@')[0],
+        lastName: ''
+      };
     }
-    return '';
+    return { firstName: '', lastName: '' };
   }, [user]);
 
   // Trigger entrance animation
@@ -285,7 +340,7 @@ export default function Stck() {
           >
             {greetingData.icon}
             <span className="text-lg font-light tracking-wide">
-              {formatGreeting(greetingData.greeting, firstName)}
+              {formatGreeting(greetingData.greeting, firstName, lastName)}
             </span>
           </div>
 
