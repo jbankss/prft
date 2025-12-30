@@ -9,46 +9,54 @@ import { useUnsplashBackground } from '@/hooks/useUnsplashBackground';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
-const TIME_GREETINGS = {
+type NamePosition = 'before' | 'after' | 'none';
+
+interface GreetingItem {
+  text: string;
+  namePosition: NamePosition;
+}
+
+// Greetings structured for proper grammar
+const TIME_GREETINGS: Record<string, GreetingItem[]> = {
   earlyMorning: [
-    "Early bird gets the worm",
-    "Rise and grind",
-    "The world is quiet, let's make moves",
-    "Nobody else is awake, let's get rich",
-    "Sleep is for closers... wait",
+    { text: "Early bird gets the worm", namePosition: 'none' as NamePosition },
+    { text: "Rise and grind", namePosition: 'before' as NamePosition },
+    { text: "The world is quiet — time to make moves", namePosition: 'none' as NamePosition },
+    { text: "While they sleep, you build", namePosition: 'none' as NamePosition },
+    { text: "First one up, first one paid", namePosition: 'none' as NamePosition },
   ],
   morning: [
-    "Good morning",
-    "Fresh start today",
-    "Let's make today count",
-    "Coffee's hot, orders are hotter",
-    "Time to stack some paper",
+    { text: "Good morning", namePosition: 'after' as NamePosition },
+    { text: "Fresh start today", namePosition: 'before' as NamePosition },
+    { text: "Let's make today count", namePosition: 'before' as NamePosition },
+    { text: "Coffee's hot, orders are hotter", namePosition: 'none' as NamePosition },
+    { text: "Time to get after it", namePosition: 'before' as NamePosition },
   ],
   afternoon: [
-    "Good afternoon",
-    "Keep the momentum going",
-    "Halfway through, staying strong",
-    "Money printer go brrr",
-    "Crushing it, one order at a time",
+    { text: "Good afternoon", namePosition: 'after' as NamePosition },
+    { text: "Keep the momentum going", namePosition: 'before' as NamePosition },
+    { text: "Halfway there, staying strong", namePosition: 'none' as NamePosition },
+    { text: "Afternoon push", namePosition: 'before' as NamePosition },
+    { text: "Crushing it today", namePosition: 'before' as NamePosition },
   ],
   evening: [
-    "Good evening",
-    "Wrapping up nicely",
-    "Another day, another win",
-    "Almost quittin' time... but not yet",
-    "Evening orders hit different",
+    { text: "Good evening", namePosition: 'after' as NamePosition },
+    { text: "Wrapping up strong", namePosition: 'before' as NamePosition },
+    { text: "Another solid day", namePosition: 'before' as NamePosition },
+    { text: "Evening wind-down", namePosition: 'before' as NamePosition },
+    { text: "Great work today", namePosition: 'before' as NamePosition },
   ],
   night: [
-    "Burning the midnight oil",
-    "Night owl mode activated",
-    "The quiet hours are for building",
-    "While they sleep, we ship",
-    "Nocturnal and profitable",
+    { text: "Burning the midnight oil", namePosition: 'before' as NamePosition },
+    { text: "Night owl mode", namePosition: 'before' as NamePosition },
+    { text: "The quiet hours are for builders", namePosition: 'none' as NamePosition },
+    { text: "Late night grind", namePosition: 'before' as NamePosition },
+    { text: "Nocturnal productivity", namePosition: 'before' as NamePosition },
   ],
 };
 
-function getTimeGreeting(hour: number): { greeting: string; icon: React.ReactNode } {
-  let greetings: string[];
+function getTimeGreeting(hour: number): { greeting: GreetingItem; icon: React.ReactNode } {
+  let greetings: GreetingItem[];
   let icon: React.ReactNode;
 
   if (hour >= 5 && hour < 7) {
@@ -70,6 +78,19 @@ function getTimeGreeting(hour: number): { greeting: string; icon: React.ReactNod
 
   const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
   return { greeting: randomGreeting, icon };
+}
+
+function formatGreeting(greeting: GreetingItem, firstName: string): string {
+  if (!firstName || greeting.namePosition === 'none') {
+    return greeting.text;
+  }
+  
+  if (greeting.namePosition === 'before') {
+    return `${firstName}, ${greeting.text.toLowerCase()}`;
+  }
+  
+  // after
+  return `${greeting.text}, ${firstName}`;
 }
 
 export default function Stck() {
@@ -264,7 +285,7 @@ export default function Stck() {
           >
             {greetingData.icon}
             <span className="text-lg font-light tracking-wide">
-              {greetingData.greeting}{firstName ? `, ${firstName}` : ''}
+              {formatGreeting(greetingData.greeting, firstName)}
             </span>
           </div>
 

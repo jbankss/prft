@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useMockupMode } from './useMockupMode';
 
 interface SnapshotData {
   topVendor: { name: string; revenue: number } | null;
@@ -15,6 +16,7 @@ interface SnapshotData {
 }
 
 export function useYearlySnapshot(brandId: string | undefined) {
+  const { inflateNumber, inflateString } = useMockupMode();
   const [data, setData] = useState<SnapshotData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,5 +185,36 @@ export function useYearlySnapshot(brandId: string | undefined) {
     fetchSnapshot();
   }, [brandId]);
 
-  return { data, loading, error };
+  // Apply mockup mode inflation
+  const inflatedData = data ? {
+    topVendor: data.topVendor ? {
+      name: inflateString(data.topVendor.name, 'vendor') || data.topVendor.name,
+      revenue: inflateNumber(data.topVendor.revenue, 'revenue'),
+    } : null,
+    lowestVendor: data.lowestVendor ? {
+      name: inflateString(data.lowestVendor.name, 'vendor') || data.lowestVendor.name,
+      revenue: inflateNumber(data.lowestVendor.revenue, 'revenue'),
+    } : null,
+    bestMonth: data.bestMonth ? {
+      month: data.bestMonth.month,
+      revenue: inflateNumber(data.bestMonth.revenue, 'revenue'),
+    } : null,
+    totalRevenue: inflateNumber(data.totalRevenue, 'revenue'),
+    totalOrders: inflateNumber(data.totalOrders, 'orders'),
+    mostConsistentVendor: data.mostConsistentVendor ? {
+      name: inflateString(data.mostConsistentVendor.name, 'vendor') || data.mostConsistentVendor.name,
+      months: data.mostConsistentVendor.months,
+    } : null,
+    avgOrderValue: inflateNumber(data.avgOrderValue, 'revenue'),
+    yearOverYearGrowth: data.yearOverYearGrowth !== null 
+      ? inflateNumber(data.yearOverYearGrowth, 'percentage') 
+      : null,
+    topProduct: data.topProduct,
+    peakDay: data.peakDay ? {
+      date: data.peakDay.date,
+      orders: inflateNumber(data.peakDay.orders, 'orders'),
+    } : null,
+  } : null;
+
+  return { data: inflatedData, loading, error };
 }

@@ -1,11 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 import { useBrandContext } from '@/hooks/useBrandContext';
+import { useMockupMode } from '@/hooks/useMockupMode';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export function AccountsWidgets() {
   const { currentBrand } = useBrandContext();
+  const { inflateNumber } = useMockupMode();
   const [metrics, setMetrics] = useState({
     realizedPL: 0,
     pendingLoss: 0,
@@ -97,31 +99,39 @@ export function AccountsWidgets() {
     };
   }, [currentBrand?.id]);
 
+  // Apply mockup mode inflation
+  const m = {
+    realizedPL: inflateNumber(metrics.realizedPL, 'revenue'),
+    pendingLoss: inflateNumber(metrics.pendingLoss, 'balance'),
+    totalAccounts: inflateNumber(metrics.totalAccounts, 'accounts'),
+    avgDaysBetweenOrders: inflateNumber(metrics.avgDaysBetweenOrders, 'days'),
+  };
+
   const widgets = [
     {
       title: 'Realized P&L',
-      value: '$0.00',
+      value: m.realizedPL > 0 ? `$${m.realizedPL.toLocaleString()}` : '$0.00',
       icon: TrendingUp,
-      trend: 'Starting fresh',
+      trend: 'Collected revenue',
       color: 'text-green-500',
     },
     {
       title: 'Pending Loss',
-      value: `-$${metrics.pendingLoss.toLocaleString()}`,
+      value: `-$${m.pendingLoss.toLocaleString()}`,
       icon: TrendingDown,
       trend: 'Unpaid amounts',
-      color: metrics.pendingLoss > 0 ? 'text-red-500' : 'text-muted-foreground',
+      color: m.pendingLoss > 0 ? 'text-red-500' : 'text-muted-foreground',
     },
     {
       title: 'Active Accounts',
-      value: metrics.totalAccounts.toString(),
+      value: m.totalAccounts.toString(),
       icon: DollarSign,
       trend: 'Vendors',
       color: 'text-blue-500',
     },
     {
       title: 'Avg. Order Cycle',
-      value: `${metrics.avgDaysBetweenOrders} days`,
+      value: `${m.avgDaysBetweenOrders} days`,
       icon: Calendar,
       trend: 'Between orders',
       color: 'text-orange-500',
