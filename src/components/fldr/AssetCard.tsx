@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Download, Plus, Share2, Eye, MoreHorizontal, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -42,30 +42,8 @@ interface AssetCardProps {
 export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [isInView, setIsInView] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-
-  // Intersection Observer for lazy loading
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      {
-        rootMargin: '100px', // Start loading slightly before in view
-        threshold: 0.1
-      }
-    );
-
-    if (cardRef.current) {
-      observer.observe(cardRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, []);
 
   // Get public URL for the asset (no transformations - works on all plans)
   const getAssetUrl = () => {
@@ -164,10 +142,10 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
 
       {/* Thumbnail */}
       <div className="aspect-square bg-muted relative overflow-hidden">
-        {isImage && isInView ? (
+        {isImage ? (
           <>
             {/* Shimmer placeholder while loading */}
-            {!imageLoaded && (
+            {!imageLoaded && !imageError && (
               <div className="absolute inset-0 fldr-thumb-shimmer" />
             )}
             
@@ -181,11 +159,21 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
                 imageLoaded ? "opacity-100" : "opacity-0"
               )}
               onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
               loading="lazy"
               decoding="async"
             />
+            
+            {/* Error fallback */}
+            {imageError && (
+              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                <span className="text-2xl font-bold uppercase">
+                  {asset.file_type.split('/')[1]?.slice(0, 4) || asset.file_type.slice(0, 4) || 'FILE'}
+                </span>
+              </div>
+            )}
           </>
-        ) : isVideo && isInView ? (
+        ) : isVideo ? (
           <video
             src={getAssetUrl()}
             className="w-full h-full object-cover"
@@ -200,13 +188,9 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            {!isInView ? (
-              <div className="w-full h-full fldr-thumb-shimmer" />
-            ) : (
-              <span className="text-2xl font-bold uppercase">
-                {asset.file_type.split('/')[1]?.slice(0, 4) || 'FILE'}
-              </span>
-            )}
+            <span className="text-2xl font-bold uppercase">
+              {asset.file_type.split('/')[1]?.slice(0, 4) || asset.file_type.slice(0, 4) || 'FILE'}
+            </span>
           </div>
         )}
 
