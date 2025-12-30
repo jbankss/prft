@@ -75,8 +75,11 @@ export function AssetCard({ asset, isSelected, onSelect, onView }: AssetCardProp
     return data.publicUrl;
   };
 
-  const isImage = asset.file_type.startsWith('image/');
-  const isVideo = asset.file_type.startsWith('video/');
+  // Check both mime_type format and file extension format
+  const isImage = asset.file_type.startsWith('image/') || 
+    /^(jpg|jpeg|png|gif|webp|svg|bmp|ico|heic|heif|avif|tiff?)$/i.test(asset.file_type);
+  const isVideo = asset.file_type.startsWith('video/') || 
+    /^(mp4|mov|avi|webm|mkv|m4v|wmv|flv|3gp)$/i.test(asset.file_type);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
