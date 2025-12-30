@@ -8,6 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useMockupMode } from '@/hooks/useMockupMode';
 import { AccountDetailsInline } from './AccountDetailsInline';
 
 interface Account {
@@ -69,6 +70,7 @@ export function AccountsList({
   brands: any[];
   onRefresh: () => void;
 }) {
+  const { inflateNumber, inflateString, sessionSeed } = useMockupMode();
   const [selectedAccountForDetails, setSelectedAccountForDetails] = useState<Account | null>(null);
   const [selectedAccountForEdit, setSelectedAccountForEdit] = useState<Account | null>(null);
   const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
@@ -106,13 +108,19 @@ export function AccountsList({
     }
   };
 
-  // Simplified metrics - just balance owed
+  // Simplified metrics - just balance owed (with mockup inflation)
   const getBalance = (account: Account) => {
     const manualBalance = Number(account.manual_balance || 0);
     const unpaidInvoices = (account.invoices || [])
       .filter((inv: any) => inv.status !== 'paid')
       .reduce((sum: number, inv: any) => sum + Number(inv.amount), 0);
-    return manualBalance + unpaidInvoices;
+    const rawBalance = manualBalance + unpaidInvoices;
+    return inflateNumber(rawBalance, 'balance');
+  };
+
+  // Inflate account name for mockup mode
+  const getDisplayName = (account: Account) => {
+    return inflateString(account.account_name, 'vendor') || account.account_name;
   };
 
   return (
@@ -142,7 +150,7 @@ export function AccountsList({
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-medium text-sm sm:text-base truncate group-hover:text-primary transition-colors">
-                        {account.account_name}
+                        {getDisplayName(account)}
                       </h3>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge 

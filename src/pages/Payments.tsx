@@ -7,12 +7,14 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBrandContext } from '@/hooks/useBrandContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useMockupMode } from '@/hooks/useMockupMode';
 import { PaymentDetailsDialog } from '@/components/payments/PaymentDetailsDialog';
 import { Search, FileText, Calendar, DollarSign, Filter, ChevronRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function Payments() {
   const isMobile = useIsMobile();
+  const { inflateNumber, sessionSeed } = useMockupMode();
   const {
     currentBrand
   } = useBrandContext();
@@ -38,7 +40,14 @@ export default function Payments() {
     },
     enabled: !!currentBrand?.id
   });
-  const filteredPayments = payments?.filter(payment => {
+
+  // Apply mockup mode inflation to payments
+  const inflatedPayments = payments?.map(p => ({
+    ...p,
+    amount: inflateNumber(Number(p.amount), 'revenue')
+  }));
+
+  const filteredPayments = inflatedPayments?.filter(payment => {
     const matchesSearch = payment.invoice_number?.toLowerCase().includes(searchQuery.toLowerCase()) || payment.transaction_id?.toLowerCase().includes(searchQuery.toLowerCase()) || payment.notes?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
     return matchesSearch && matchesStatus;

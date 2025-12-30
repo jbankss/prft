@@ -42,7 +42,7 @@ export interface DateRangeState {
 export function useDashboardMetrics(dateRange?: DateRangeState) {
   const { currentBrand } = useBrandContext();
   const { user } = useAuth();
-  const { inflateNumber, inflateString, mockupMode } = useMockupMode();
+  const { inflateNumber, inflateString, mockupMode, sessionSeed } = useMockupMode();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 

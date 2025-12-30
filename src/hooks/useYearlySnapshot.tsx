@@ -16,7 +16,7 @@ interface SnapshotData {
 }
 
 export function useYearlySnapshot(brandId: string | undefined) {
-  const { inflateNumber, inflateString } = useMockupMode();
+  const { inflateNumber, inflateString, sessionSeed } = useMockupMode();
   const [data, setData] = useState<SnapshotData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

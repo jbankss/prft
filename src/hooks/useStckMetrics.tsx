@@ -39,7 +39,7 @@ interface FunFact {
 
 export function useStckMetrics() {
   const { currentBrand } = useBrandContext();
-  const { inflateNumber, inflateString, mockupMode } = useMockupMode();
+  const { inflateNumber, inflateString, mockupMode, sessionSeed } = useMockupMode();
   const [metrics, setMetrics] = useState<StckMetrics>({
     todayOrders: 0,
     todayRevenue: 0,

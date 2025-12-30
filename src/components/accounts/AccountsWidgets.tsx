@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export function AccountsWidgets() {
   const { currentBrand } = useBrandContext();
-  const { inflateNumber } = useMockupMode();
+  const { inflateNumber, sessionSeed } = useMockupMode();
   const [metrics, setMetrics] = useState({
     realizedPL: 0,
     pendingLoss: 0,
