@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useBrandContext } from './useBrandContext';
 import { useAuth } from './useAuth';
+import { useMockupMode } from './useMockupMode';
 import { startOfDay, endOfDay, subDays, startOfWeek, startOfMonth, format, eachDayOfInterval, eachHourOfInterval, isSameDay } from 'date-fns';
 
 export interface DashboardMetrics {
@@ -41,6 +42,7 @@ export interface DateRangeState {
 export function useDashboardMetrics(dateRange?: DateRangeState) {
   const { currentBrand } = useBrandContext();
   const { user } = useAuth();
+  const { inflateNumber, inflateString, mockupMode } = useMockupMode();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -330,5 +332,46 @@ export function useDashboardMetrics(dateRange?: DateRangeState) {
     };
   }, [currentBrand?.id, dateRange?.start?.getTime(), dateRange?.end?.getTime(), dateRange?.comparison?.start?.getTime(), dateRange?.comparison?.end?.getTime()]);
 
-  return { metrics, loading, refresh: fetchMetrics };
+  // Apply mockup mode inflation to the metrics
+  const inflatedMetrics = metrics ? {
+    ...metrics,
+    todayRevenue: inflateNumber(metrics.todayRevenue, 'revenue'),
+    yesterdayRevenue: inflateNumber(metrics.yesterdayRevenue, 'revenue'),
+    weekRevenue: inflateNumber(metrics.weekRevenue, 'revenue'),
+    monthRevenue: inflateNumber(metrics.monthRevenue, 'revenue'),
+    ordersToday: inflateNumber(metrics.ordersToday, 'orders'),
+    activeVendors: inflateNumber(metrics.activeVendors, 'accounts'),
+    avgOrderValue: inflateNumber(metrics.avgOrderValue, 'revenue'),
+    pendingPayments: inflateNumber(metrics.pendingPayments, 'balance'),
+    dailyRevenue: metrics.dailyRevenue.map(d => ({
+      ...d,
+      amount: inflateNumber(d.amount, 'revenue')
+    })),
+    topVendors: metrics.topVendors.map(v => ({
+      ...v,
+      name: inflateString(v.name, 'vendor') || v.name,
+      revenue: inflateNumber(v.revenue, 'revenue'),
+      orderCount: inflateNumber(v.orderCount, 'orders'),
+      avgOrderValue: inflateNumber(v.avgOrderValue, 'revenue'),
+    })),
+    salesChannels: {
+      pos: inflateNumber(metrics.salesChannels.pos, 'revenue'),
+      online: inflateNumber(metrics.salesChannels.online, 'revenue'),
+      tiktok: inflateNumber(metrics.salesChannels.tiktok, 'revenue'),
+    },
+    recentOrders: metrics.recentOrders.map(o => ({
+      ...o,
+      vendor: inflateString(o.vendor, 'vendor') || o.vendor,
+      amount: inflateNumber(o.amount, 'revenue'),
+    })),
+    comparisonDailyRevenue: metrics.comparisonDailyRevenue?.map(d => ({
+      ...d,
+      amount: inflateNumber(d.amount, 'revenue')
+    })),
+    comparisonTotalRevenue: metrics.comparisonTotalRevenue 
+      ? inflateNumber(metrics.comparisonTotalRevenue, 'revenue') 
+      : undefined,
+  } : null;
+
+  return { metrics: inflatedMetrics, loading, refresh: fetchMetrics };
 }

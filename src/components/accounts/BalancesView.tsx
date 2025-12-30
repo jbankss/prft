@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useMockupMode } from '@/hooks/useMockupMode';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, TrendingUp, TrendingDown, Package, ShoppingCart, Percent } from 'lucide-react';
@@ -17,6 +18,7 @@ interface BalanceMetrics {
 }
 
 export function BalancesView({ brandId }: { brandId: string }) {
+  const { inflateNumber, inflateString } = useMockupMode();
   const [balances, setBalances] = useState<BalanceMetrics[]>([]);
   const [totals, setTotals] = useState({
     totalCOGS: 0,
@@ -88,6 +90,26 @@ export function BalancesView({ brandId }: { brandId: string }) {
     }
   };
 
+  // Apply mockup mode inflation
+  const inflatedTotals = {
+    totalCOGS: inflateNumber(totals.totalCOGS, 'revenue'),
+    totalRevenue: inflateNumber(totals.totalRevenue, 'revenue'),
+    grossProfit: inflateNumber(totals.grossProfit, 'revenue'),
+    avgMargin: inflateNumber(totals.avgMargin, 'percentage'),
+    totalBalance: inflateNumber(totals.totalBalance, 'balance'),
+  };
+
+  const inflatedBalances = balances.map(b => ({
+    ...b,
+    accountName: inflateString(b.accountName, 'vendor') || b.accountName,
+    totalCOGS: inflateNumber(b.totalCOGS, 'revenue'),
+    totalRevenue: inflateNumber(b.totalRevenue, 'revenue'),
+    grossProfit: inflateNumber(b.grossProfit, 'revenue'),
+    marginPercent: inflateNumber(b.marginPercent, 'percentage'),
+    outstandingBalance: inflateNumber(b.outstandingBalance, 'balance'),
+    roi: inflateNumber(b.roi, 'percentage'),
+  }));
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -112,7 +134,7 @@ export function BalancesView({ brandId }: { brandId: string }) {
               <Package className="h-4 w-4" />
               Total COGS
             </CardDescription>
-            <CardTitle className="text-2xl">${totals.totalCOGS.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl">${inflatedTotals.totalCOGS.toLocaleString()}</CardTitle>
           </CardHeader>
         </Card>
 
@@ -122,22 +144,22 @@ export function BalancesView({ brandId }: { brandId: string }) {
               <ShoppingCart className="h-4 w-4" />
               Total Revenue
             </CardDescription>
-            <CardTitle className="text-2xl">${totals.totalRevenue.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl">${inflatedTotals.totalRevenue.toLocaleString()}</CardTitle>
           </CardHeader>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
             <CardDescription className="flex items-center gap-2">
-              {totals.grossProfit >= 0 ? (
+              {inflatedTotals.grossProfit >= 0 ? (
                 <TrendingUp className="h-4 w-4 text-green-500" />
               ) : (
                 <TrendingDown className="h-4 w-4 text-red-500" />
               )}
               Gross Profit
             </CardDescription>
-            <CardTitle className={`text-2xl ${totals.grossProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              ${Math.abs(totals.grossProfit).toLocaleString()}
+            <CardTitle className={`text-2xl ${inflatedTotals.grossProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              ${Math.abs(inflatedTotals.grossProfit).toLocaleString()}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -148,7 +170,7 @@ export function BalancesView({ brandId }: { brandId: string }) {
               <Percent className="h-4 w-4" />
               Avg Margin
             </CardDescription>
-            <CardTitle className="text-2xl">{totals.avgMargin.toFixed(1)}%</CardTitle>
+            <CardTitle className="text-2xl">{inflatedTotals.avgMargin.toFixed(1)}%</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -156,7 +178,7 @@ export function BalancesView({ brandId }: { brandId: string }) {
       {/* Account Breakdown */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Account Balances</h3>
-        {balances.map((balance) => (
+        {inflatedBalances.map((balance) => (
           <Card key={balance.accountId}>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -195,7 +217,7 @@ export function BalancesView({ brandId }: { brandId: string }) {
           </Card>
         ))}
 
-        {balances.length === 0 && (
+        {inflatedBalances.length === 0 && (
           <Card>
             <CardContent className="p-12 text-center text-muted-foreground">
               No accounts found for this brand
