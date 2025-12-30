@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useMockupMode } from '@/hooks/useMockupMode';
 import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -14,7 +15,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, HelpCircle, LogOut, Circle } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Settings, HelpCircle, LogOut, Circle, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Profile {
@@ -27,6 +29,7 @@ interface Profile {
 
 export function UserProfileDropdown() {
   const { user, signOut } = useAuth();
+  const { mockupMode, setMockupMode } = useMockupMode();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
 
@@ -64,6 +67,12 @@ export function UserProfileDropdown() {
     } catch (error: any) {
       toast.error('Failed to update status');
     }
+  };
+
+  const handleMockupToggle = async () => {
+    const newValue = !mockupMode;
+    await setMockupMode(newValue);
+    toast.success(newValue ? 'Demo mode enabled' : 'Demo mode disabled');
   };
 
   const getStatusColor = (status: string) => {
@@ -106,6 +115,24 @@ export function UserProfileDropdown() {
             </p>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        
+        {/* Mockup Mode Toggle */}
+        <div 
+          className="flex items-center justify-between px-2 py-2 cursor-pointer hover:bg-accent rounded-sm"
+          onClick={handleMockupToggle}
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles className={`h-4 w-4 ${mockupMode ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className="text-sm">Demo Mode</span>
+          </div>
+          <Switch 
+            checked={mockupMode} 
+            onCheckedChange={handleMockupToggle}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+
         <DropdownMenuSeparator />
         
         <DropdownMenuItem onClick={() => navigate('/user-settings')} className="cursor-pointer">

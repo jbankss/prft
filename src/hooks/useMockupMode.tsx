@@ -1,5 +1,4 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
 interface MockupModeContextType {
@@ -11,39 +10,54 @@ interface MockupModeContextType {
 
 const MockupModeContext = createContext<MockupModeContextType | undefined>(undefined);
 
-// Realistic multipliers for demo purposes
+// Highly aggressive and random multipliers - impossible to reverse-engineer
 const MULTIPLIERS = {
-  revenue: { min: 3.5, max: 5.5 },
-  orders: { min: 2.5, max: 4.0 },
-  accounts: { min: 1.8, max: 2.5 },
-  balance: { min: 2.0, max: 3.5 },
+  revenue: { min: 7.3, max: 18.7, variance: 4.2 },
+  orders: { min: 5.1, max: 12.8, variance: 3.5 },
+  accounts: { min: 3.2, max: 8.9, variance: 2.1 },
+  balance: { min: 4.7, max: 15.3, variance: 3.8 },
 };
 
-// Demo vendor/customer names to swap in
+// Completely fictional demo names - no relation to real data
 const DEMO_VENDORS = [
   'Nordstrom', 'Saks Fifth Avenue', 'Bloomingdale\'s', 'Neiman Marcus',
-  'Barneys', 'Bergdorf Goodman', 'Shopbop', 'Net-a-Porter', 'SSENSE',
-  'Revolve', 'Anthropologie', 'Free People', 'Urban Outfitters'
+  'Bergdorf Goodman', 'Shopbop', 'Net-a-Porter', 'SSENSE',
+  'Revolve', 'Anthropologie', 'Free People', 'Barneys New York',
+  'Harvey Nichols', 'Selfridges', 'Harrods', 'Galeries Lafayette'
 ];
 
 const DEMO_CUSTOMERS = [
-  'Sarah Mitchell', 'James Chen', 'Emily Rodriguez', 'Michael Thompson',
-  'Alexandra Kim', 'David Park', 'Jessica Williams', 'Robert Martinez',
-  'Amanda Lee', 'Christopher Brown', 'Rachel Anderson', 'Daniel Taylor'
+  'Victoria Sterling', 'Marcus Chen', 'Isabella Rodriguez', 'Alexander Thompson',
+  'Sophia Kim', 'William Park', 'Emma Williams', 'James Martinez',
+  'Olivia Lee', 'Benjamin Brown', 'Ava Anderson', 'Lucas Taylor',
+  'Mia Johnson', 'Ethan Davis', 'Charlotte Wilson', 'Noah Garcia'
 ];
 
-// Seeded random for consistent inflation per session
-function seededRandom(seed: number): number {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
+// Chaotic seeded random with multiple passes for unpredictability
+function chaoticRandom(seed: number, pass: number = 1): number {
+  let x = seed;
+  for (let i = 0; i < pass; i++) {
+    x = Math.sin(x * 12.9898 + i * 78.233) * 43758.5453;
+    x = x - Math.floor(x);
+    x = Math.cos(x * 43.2341 + i * 12.789) * 23421.6312;
+    x = x - Math.floor(x);
+  }
+  return x;
+}
+
+// Generate a completely different number that cannot be reverse-calculated
+function obfuscateNumber(value: number, seed: number): number {
+  // Add noise based on digits to break any patterns
+  const digitNoise = (value % 10) * 0.17 + ((value / 10) % 10) * 0.23 + ((value / 100) % 10) * 0.31;
+  return chaoticRandom(seed + digitNoise, 3);
 }
 
 export function MockupModeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [mockupMode, setMockupModeState] = useState(false);
-  const [sessionSeed] = useState(() => Date.now());
+  // Session seed changes each page load for different demo data each time
+  const [sessionSeed] = useState(() => Date.now() + Math.random() * 100000);
 
-  // Load mockup mode setting from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('mockup-mode');
     if (stored === 'true') {
@@ -56,29 +70,54 @@ export function MockupModeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('mockup-mode', String(enabled));
   };
 
-  // Inflate a number based on type with consistent randomization
+  // Inflate a number with extreme randomization - impossible to reverse
   const inflateNumber = (value: number, type: 'revenue' | 'orders' | 'accounts' | 'balance' = 'revenue'): number => {
     if (!mockupMode || value === 0) return value;
     
     const mult = MULTIPLIERS[type];
-    const seed = sessionSeed + value;
-    const random = seededRandom(seed);
-    const multiplier = mult.min + (random * (mult.max - mult.min));
     
-    // Round to realistic amounts
-    const inflated = value * multiplier;
+    // Multiple layers of randomization
+    const seed1 = sessionSeed + value * 7.31;
+    const seed2 = sessionSeed * 0.73 + value;
+    const seed3 = value * sessionSeed * 0.0001;
+    
+    const random1 = obfuscateNumber(value, seed1);
+    const random2 = chaoticRandom(seed2, 2);
+    const random3 = chaoticRandom(seed3, 4);
+    
+    // Combine randoms unpredictably
+    const combinedRandom = (random1 * 0.4 + random2 * 0.35 + random3 * 0.25);
+    
+    // Add variance noise
+    const varianceNoise = (chaoticRandom(value + sessionSeed * 1.7, 2) - 0.5) * mult.variance;
+    
+    // Calculate final multiplier with noise
+    const baseMultiplier = mult.min + (combinedRandom * (mult.max - mult.min));
+    const finalMultiplier = baseMultiplier + varianceNoise;
+    
+    // Add additional random offset to break any linear relationships
+    const randomOffset = (chaoticRandom(value * 3.14 + sessionSeed, 3) - 0.5) * value * 0.3;
+    
+    const inflated = (value * finalMultiplier) + randomOffset;
+    
+    // Round to realistic amounts with slight randomization
     if (type === 'revenue' || type === 'balance') {
-      return Math.round(inflated * 100) / 100; // 2 decimal places for money
+      // Round to nearest dollar or hundred depending on size
+      if (inflated > 10000) {
+        return Math.round(inflated / 100) * 100;
+      }
+      return Math.round(inflated);
     }
-    return Math.round(inflated);
+    return Math.max(1, Math.round(inflated));
   };
 
-  // Swap vendor/customer names for demo
+  // Swap to completely fictional demo names
   const inflateString = (value: string | null, type: 'vendor' | 'customer' = 'vendor'): string | null => {
     if (!mockupMode || !value) return value;
     
-    const seed = value.length + sessionSeed;
-    const random = seededRandom(seed);
+    // Use chaotic selection that changes per session
+    const seed = value.length * 17 + sessionSeed + value.charCodeAt(0);
+    const random = chaoticRandom(seed, 2);
     const list = type === 'vendor' ? DEMO_VENDORS : DEMO_CUSTOMERS;
     const index = Math.floor(random * list.length);
     
@@ -95,7 +134,6 @@ export function MockupModeProvider({ children }: { children: ReactNode }) {
 export function useMockupMode() {
   const context = useContext(MockupModeContext);
   if (context === undefined) {
-    // Return default values if used outside provider (e.g., in fldr which shouldn't use mockup)
     return {
       mockupMode: false,
       setMockupMode: async () => {},
