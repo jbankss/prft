@@ -7,6 +7,7 @@ import { ThemeProvider as NextThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { BrandProvider } from "@/hooks/useBrandContext";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { MockupModeProvider } from "@/hooks/useMockupMode";
 import { MainLayout } from "@/components/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
@@ -36,32 +37,34 @@ const App = () => (
         <AuthProvider>
           <ThemeProvider>
             <BrandProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <Routes>
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
-                <Route path="/payments" element={<MainLayout><Payments /></MainLayout>} />
-                <Route path="/balances" element={<MainLayout><Balances /></MainLayout>} />
-                <Route path="/customers" element={<MainLayout><Customers /></MainLayout>} />
-                <Route path="/products" element={<MainLayout><Products /></MainLayout>} />
-                
-                <Route path="/reports" element={<MainLayout><Reports /></MainLayout>} />
-                <Route path="/connect" element={<MainLayout><Connect /></MainLayout>} />
-                <Route path="/accounts" element={<MainLayout><Accounts /></MainLayout>} />
-                <Route path="/creative" element={<Creative />} />
-                <Route path="/integrations" element={<MainLayout><Integrations /></MainLayout>} />
-                <Route path="/personnel" element={<MainLayout><Personnel /></MainLayout>} />
-                <Route path="/approvals" element={<MainLayout><Approvals /></MainLayout>} />
-                <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
-                <Route path="/store-settings" element={<MainLayout><StoreSettings /></MainLayout>} />
-                <Route path="/user-settings" element={<MainLayout><UserSettings /></MainLayout>} />
-                <Route path="/stck" element={<Stck />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </TooltipProvider>
+              <MockupModeProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
+                  <Route path="/payments" element={<MainLayout><Payments /></MainLayout>} />
+                  <Route path="/balances" element={<MainLayout><Balances /></MainLayout>} />
+                  <Route path="/customers" element={<MainLayout><Customers /></MainLayout>} />
+                  <Route path="/products" element={<MainLayout><Products /></MainLayout>} />
+                  
+                  <Route path="/reports" element={<MainLayout><Reports /></MainLayout>} />
+                  <Route path="/connect" element={<MainLayout><Connect /></MainLayout>} />
+                  <Route path="/accounts" element={<MainLayout><Accounts /></MainLayout>} />
+                  <Route path="/creative" element={<Creative />} />
+                  <Route path="/integrations" element={<MainLayout><Integrations /></MainLayout>} />
+                  <Route path="/personnel" element={<MainLayout><Personnel /></MainLayout>} />
+                  <Route path="/approvals" element={<MainLayout><Approvals /></MainLayout>} />
+                  <Route path="/profile" element={<MainLayout><Profile /></MainLayout>} />
+                  <Route path="/store-settings" element={<MainLayout><StoreSettings /></MainLayout>} />
+                  <Route path="/user-settings" element={<MainLayout><UserSettings /></MainLayout>} />
+                  <Route path="/stck" element={<Stck />} />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </TooltipProvider>
+              </MockupModeProvider>
             </BrandProvider>
           </ThemeProvider>
         </AuthProvider>

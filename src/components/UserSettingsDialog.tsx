@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useMockupMode } from '@/hooks/useMockupMode';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Upload, Loader2, User } from 'lucide-react';
+import { Upload, Loader2, User, Sparkles } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ThemeSelector } from './ThemeSelector';
 
@@ -18,6 +20,7 @@ interface UserSettingsDialogProps {
 
 export function UserSettingsDialog({ open, onOpenChange }: UserSettingsDialogProps) {
   const { user } = useAuth();
+  const { mockupMode, setMockupMode } = useMockupMode();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [updatingPassword, setUpdatingPassword] = useState(false);
@@ -110,6 +113,11 @@ export function UserSettingsDialog({ open, onOpenChange }: UserSettingsDialogPro
     } finally {
       setUpdatingPassword(false);
     }
+  };
+
+  const handleMockupModeToggle = async (enabled: boolean) => {
+    await setMockupMode(enabled);
+    toast.success(enabled ? 'Mockup mode enabled - showing demo data' : 'Mockup mode disabled - showing real data');
   };
 
   return (
@@ -210,6 +218,26 @@ export function UserSettingsDialog({ open, onOpenChange }: UserSettingsDialogPro
           {/* Theme Selection */}
           <div className="space-y-4 pt-4 border-t">
             <ThemeSelector />
+          </div>
+
+          {/* Demo Mode / Mockup Mode */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="mockup-mode" className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Mockup Mode
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Show inflated demo data for sales presentations. Does not affect the fldr creative library.
+                </p>
+              </div>
+              <Switch
+                id="mockup-mode"
+                checked={mockupMode}
+                onCheckedChange={handleMockupModeToggle}
+              />
+            </div>
           </div>
 
             <div className="space-y-2">
