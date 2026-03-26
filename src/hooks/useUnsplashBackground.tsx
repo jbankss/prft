@@ -69,7 +69,7 @@ export function useUnsplashBackground(): UseUnsplashBackgroundReturn {
   });
   const [error, setError] = useState<string | null>(null);
   const preloadedImages = useRef<Set<string>>(new Set());
-  const cycleIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const cycleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Preload an image and return a promise
   const preloadImage = useCallback((url: string): Promise<void> => {
