@@ -32,13 +32,14 @@ export function MainLayout({ children }: MainLayoutProps) {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/auth" />;
-  }
+  // Auth bypass — allow full access without login
+  // if (!user) {
+  //   return <Navigate to="/auth" />;
+  // }
 
-  if (availableBrands.length === 0) {
-    return <PendingApproval />;
-  }
+  // if (availableBrands.length === 0) {
+  //   return <PendingApproval />;
+  // }
 
   return (
     <div className="min-h-screen bg-background">

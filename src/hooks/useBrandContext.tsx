@@ -23,9 +23,17 @@ export function BrandProvider({ children }: { children: ReactNode }) {
 
   const fetchUserBrands = async () => {
     if (!user) {
-      setCurrentBrand(null);
-      setAvailableBrands([]);
-      setLoading(false);
+      // No user — fetch all brands for demo/bypass mode
+      try {
+        const { data: allBrands } = await supabase.from('brands').select('*').order('name');
+        const brands = allBrands || [];
+        setAvailableBrands(brands);
+        if (brands.length > 0) setCurrentBrand(brands[0]);
+      } catch (e) {
+        console.error('Error fetching brands in bypass mode:', e);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
       try {
